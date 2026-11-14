@@ -5,6 +5,8 @@ right client, so the wrapper is just "read the env var, call init". Writing our 
 switch would be an interface with one implementation.
 """
 
+import os
+
 from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
 from langchain_core.embeddings import Embeddings
@@ -16,9 +18,12 @@ from kanon.config import Settings
 def chat_model(settings: Settings, role: str = "rag") -> BaseChatModel:
     """role: 'rag' (generation path) or 'judge' (Tier C, advisory)."""
     model = settings.judge_model if role == "judge" else settings.rag_model
-    # temperature 0: classification and citation extraction should be repeatable across runs
-    # of the frozen question set. Some reasoning models reject the param; drop it if so.
-    return init_chat_model(model, temperature=0)
+    # Temperature is opt-in (KANON_TEMPERATURE): reasoning models such as the GPT-5 family reject
+    # anything but the default. Repeatability of the *authority* decision doesn't depend on it —
+    # the resolver and gate are deterministic; only answer wording varies run to run.
+    temperature = os.environ.get("KANON_TEMPERATURE")
+    kwargs = {"temperature": float(temperature)} if temperature else {}
+    return init_chat_model(model, **kwargs)
 
 
 def embeddings(settings: Settings) -> Embeddings:
