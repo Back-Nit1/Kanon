@@ -170,7 +170,63 @@ def test_check_questions_rejects_underivable_expectations():
                           expected=[])]                      # time_anchored without as_of
     problems = evals.check_questions(st, TODAY, bad)
     assert len(problems) == 3
-    assert evals.check_questions(st, TODAY, [q("ok", ["DOC-A@1"]), q("ev", ["EV-1@0"])]) == []
+    assert evals.check_questions(st, TODAY, [q("ok", ["DOC-A@1"]), q("ev", ["EV-1@0"], category="control")]) == []
+
+
+# ---- resolver level -----------------------------------------------------------------------
+
+def _resolver_store():
+    """GX Rev 0 (2000) withdrawn into GY Rev 0 (cross-family, 2010); GZ has an undated, unparseable
+    supersession statement (blocks); FR-X is a record. Placeholder ids, no claims about the world."""
+    st = AuthorityStore()
+    for doc, status, kind in [("GX", "withdrawn", "reg_guide"), ("GY", "active", "reg_guide"),
+                              ("GZ", "active", "reg_guide"), ("FR-X", "active", "rulemaking")]:
+        st.upsert_document(DocumentVersion(doc_id=doc, revision="0", kind=kind, status=status,
+                                           effective_from=date(2000 if doc != "GY" else 2010, 1, 1)))
+    st.add_edge(Edge(from_doc="GY", from_rev="0", to_doc="GX", to_rev="0", edge_type="cross_family",
+                     valid_from=date(2010, 1, 1), evidence="fixture", confidence="explicit"))
+    st.add_edge(Edge(from_doc="UNKNOWN", from_rev="*", to_doc="GZ", to_rev="0", edge_type="full",
+                     valid_from=None, evidence="fixture", confidence="unresolved"))
+    return st
+
+
+def r(id, doc_id, expected, as_of=None, category="cross_family", expect_resolved=True):
+    return evals.Question(id=id, type="resolver", doc_id=doc_id, category=category,
+                          query_kind="time_anchored" if as_of else "current", as_of=as_of,
+                          question="?", expected=expected, expect_resolved=expect_resolved)
+
+
+def test_resolver_rows_score_graph_against_status_column_flag():
+    st = _resolver_store()
+    qs = [r("before", "GX", ["GX@0"], date(2005, 1, 1), category="time_anchored"),
+          r("after", "GX", ["GY@0"], date(2015, 1, 1)),
+          r("ctrl", "GY", ["GY@0"], category="control"),
+          r("ambiguous", "GZ", [], date(2015, 1, 1), category="conflict_window", expect_resolved=False)]
+    rows = {x["id"]: x for x in (evals.resolver_row(q, st, TODAY) for q in qs)}
+    assert all(x["graph_correct"] for x in rows.values())
+    assert rows["before"]["flag"] == [] and not rows["before"]["flag_correct"]   # withdrawn today
+    assert rows["ctrl"]["flag_correct"]
+    # a status column can't say "ambiguous": wrong whenever abstention is the right answer
+    assert rows["ambiguous"]["flag"] == ["GZ@0"] and not rows["ambiguous"]["flag_correct"]
+    assert not rows["ambiguous"]["graph_resolved"] and rows["ambiguous"]["unresolved"]
+    assert evals.summarise_resolver(list(rows.values())) == {
+        "questions": 4, "graph_correct": 4, "flag_correct": 1}
+    cases = evals.failure_cases({}, None, list(rows.values()))
+    assert sorted(c["id"] for c in cases) == ["after", "ambiguous", "before"]
+    assert {c["level"] for c in cases} == {"resolver"}
+
+
+def test_check_questions_rejects_bad_resolver_and_record_only_answers():
+    st = _resolver_store()
+    bad = [evals.Question(id="a", type="resolver", category="x", query_kind="current",
+                          question="?", expected=[]),                               # no doc_id
+           r("b", "NOPE", []),                                                      # unknown doc
+           evals.Question(id="c", category="current", query_kind="current", question="?",
+                          expected=["FR-X@0"])]                                     # record as governing answer
+    assert len(evals.check_questions(st, TODAY, bad)) == 3
+    ok = evals.Question(id="d", category="control", query_kind="current", question="?",
+                        expected=["FR-X@0"])                                        # allowed as a control
+    assert evals.check_questions(st, TODAY, [ok]) == []
 
 
 # ---- end to end, offline ------------------------------------------------------------------
@@ -186,13 +242,21 @@ questions:
     as_of: 2005-06-01
     question: "pump replacement evaluation in 2005"
     expected: ["DOC-A@0"]
+  - id: res
+    type: resolver
+    category: time_anchored
+    doc_id: DOC-A
+    query_kind: time_anchored
+    as_of: 2005-06-01
+    question: "Which revision of DOC-A governed?"
+    expected: ["DOC-A@0"]
 """)
     res = evals.run(idx, st, qfile, k=5, llm=Stub(), trace_dir=tmp_path / "traces")
     gen = {m: res["generation"][m]["summary"] for m in evals.MODES}
     assert gen["graph"]["superseded_citation_rate"] == 0.0 and gen["graph"]["answer_rate"] == 1.0
     assert gen["flag"]["superseded_citation_rate"] == 1.0   # recorded, not enforced, in flag
-    assert {(c["id"], c["level"]) for c in res["failure_cases"]} == {("past", "retrieval"),
-                                                                      ("past", "generation")}
+    assert {(c["id"], c["level"]) for c in res["failure_cases"]} == {
+        ("past", "retrieval"), ("past", "generation"), ("res", "resolver")}
     report = evals.render_report(res)
     assert "effective date precedes issue date: **past** (generation)" in report
     # every superseded-citation figure in the report sits next to an answer rate
@@ -200,6 +264,11 @@ questions:
         if "superseded-citation rate" in line and "|" not in line and line.startswith("- `"):
             assert "answer rate" in line
     assert (tmp_path / "traces" / "graph" / "past").is_dir()
+    # resolver questions never reach retrieval or the agent, and get their own block
+    assert [x["id"] for x in res["retrieval"]["graph"]["rows"]] == ["past"]
+    assert not (tmp_path / "traces" / "graph" / "res").exists()
+    assert "graph (bi-temporal resolver): 1/1 correct" in report
+    assert "flag (status column today): 0/1 correct" in report
 
 
 def test_report_says_so_when_no_thesis_case_exists(tmp_path):

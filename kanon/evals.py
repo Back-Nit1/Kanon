@@ -4,13 +4,19 @@
     uv run kanon-eval --retrieval-only   # no chat model needed (still needs the embedder)
     uv run kanon-eval --judge            # also append Tier C annotations to every trace
 
-Two levels, kept separate on purpose:
+Three levels, kept separate on purpose (never pooled into one number):
   - Retrieval (CorpusIndex.search per mode, no LLM): recall@k, MRR, and superseded-chunk rate —
     the share of retrieved chunks whose document did not govern on the question's as_of.
   - Generation (the full agent): superseded-citation rate, ALWAYS paired with answer rate. A
     system that abstains on everything scores 0% superseded and is useless; the pair is the
     metric. `pair()` is the only function that formats either number, so neither can be printed
     alone.
+  - Resolver (store level, deterministic, no LLM): for `type: resolver` questions, is
+    resolve_authority(doc_id, as_of) the expected set, and is it unresolved exactly when it should
+    be? These exist because reg guides are metadata-only rows (no text to retrieve or cite).
+    `flag` has no resolver, so its stand-in is the status column today (revisions marked active).
+    That is a faithful model of a status filter, but it understates a flag RAG system, which could
+    still read a successor's name from a withdrawal notice's prose. The report says so.
 
 Everything that decides "superseded" is `store.governs` against the question's PINNED as_of,
 never the model's own date and never a model's judgment. If the model misreads the date, that
@@ -40,15 +46,21 @@ from kanon.retrieval import CorpusIndex, is_record
 from kanon.store import AuthorityStore
 
 MODES = ("none", "flag", "graph")
-# The three cases where a status flag is structurally blind and the bi-temporal graph is not.
+# The cases where a status flag is structurally blind and the bi-temporal graph is not. The spec
+# names the first three; effective-AFTER-issue is the real variant this corpus has, listed under
+# its own name so it is never passed off as the spec's "precedes" case.
 THESIS_CATEGORIES = {"partial": "partial supersession",
                      "cross_family": "cross-family supersession",
-                     "effective_before_issue": "effective date precedes issue date"}
+                     "effective_before_issue": "effective date precedes issue date",
+                     "effective_after_issue": "effective date after issue date (not the spec's named case)"}
 EVALS_DIR = Path(__file__).resolve().parent.parent / "evals"
 
 
 class Question(BaseModel):
     id: str
+    # qa: retrieval + agent in all modes. resolver: store-level check on doc_id, no LLM.
+    # Rejected: a separate resolver file. One pinned file, one sha256, one thing to freeze.
+    type: Literal["qa", "resolver"] = "qa"
     category: str
     query_kind: Literal["current", "time_anchored"]
     as_of: date | None = None       # required for time_anchored; must be absent for current
@@ -56,6 +68,8 @@ class Question(BaseModel):
     # "DOC@REV" keys (same form as Chunk.doc_key) that govern the answer on as_of.
     # Empty = no governing document exists in the corpus: the correct behaviour is to abstain.
     expected: list[str]
+    doc_id: str | None = None       # resolver only: the document whose authority is resolved
+    expect_resolved: bool = True    # resolver only: False = the correct output is "unresolved"
 
     def authority_date(self, today: date) -> date:
         return self.as_of or today
@@ -79,6 +93,14 @@ def check_questions(store: AuthorityStore, today: date, questions: list[Question
     for q in questions:
         if (q.query_kind == "time_anchored") != (q.as_of is not None):
             problems.append(f"{q.id}: time_anchored questions need as_of; current ones must not set it")
+        if (q.type == "resolver") != (q.doc_id is not None):
+            problems.append(f"{q.id}: resolver questions need doc_id; qa questions must not set it")
+        elif q.type == "resolver" and not store.revision_history(q.doc_id):
+            problems.append(f"{q.id}: doc_id {q.doc_id} is not in the authority store")
+        if q.type == "qa" and q.category != "control" and q.expected and all(
+                (d := store.get(*k.split("@", 1))) is not None and is_record(d.kind) for k in q.expected):
+            # A record (FR rule/notice, enforcement letter) states what happened; it never governs.
+            problems.append(f"{q.id}: expected set has only records; the governing answer must be a requirement")
         for key in q.expected:
             doc_id, _, rev = key.partition("@")
             d = store.get(doc_id, rev)
@@ -199,12 +221,43 @@ def generation_eval(llm, index: CorpusIndex, store: AuthorityStore, today: date,
     return rows
 
 
+# ---- resolver level -----------------------------------------------------------------------
+
+def resolver_row(q: Question, store: AuthorityStore, today: date) -> dict:
+    res = store.resolve_authority(q.doc_id, q.authority_date(today))
+    graph = [f"{d}@{r}" for d, r in res.authoritative]
+    # flag's only knowledge: which revisions carry status 'active' right now. No dates, no edges.
+    flag = [f"{v.doc_id}@{v.revision}" for v in store.revision_history(q.doc_id) if v.status == "active"]
+    expected = set(q.expected)
+    return {"id": q.id, "category": q.category, "doc_id": q.doc_id,
+            "as_of": str(q.authority_date(today)), "expected": q.expected,
+            "expect_resolved": q.expect_resolved,
+            "graph": graph, "graph_resolved": res.resolved,
+            # unresolved expected -> correct iff the resolver refuses; otherwise exact set match
+            "graph_correct": (not res.resolved) if not q.expect_resolved
+                             else (res.resolved and set(graph) == expected),
+            "unresolved": [e.describe() for e in res.unresolved],
+            "flag": flag,
+            # a status column can't say "ambiguous", so it is wrong whenever abstention is correct
+            "flag_correct": q.expect_resolved and set(flag) == expected}
+
+
+def summarise_resolver(rows: list[dict]) -> dict:
+    n = len(rows)
+    return {"questions": n,
+            "graph_correct": sum(r["graph_correct"] for r in rows),
+            "flag_correct": sum(r["flag_correct"] for r in rows)}
+
+
 # ---- named failure cases ------------------------------------------------------------------
 
-def failure_cases(retrieval: dict, generation: dict | None) -> list[dict]:
+def failure_cases(retrieval: dict, generation: dict | None, resolver: list[dict] | None = None) -> list[dict]:
     """Questions where `flag` fails and `graph` succeeds. Computed, never asserted: if this list
-    is empty the report says so."""
-    cases = []
+    is empty the report says so. Each case carries its level (retrieval/generation/resolver)."""
+    cases = [{"id": r["id"], "category": r["category"], "level": "resolver",
+              "flag": f"status column says {r['flag'] or 'nothing active'}",
+              "graph": "unresolved (abstains)" if not r["graph_resolved"] else f"{r['graph']}"}
+             for r in resolver or [] if r["graph_correct"] and not r["flag_correct"]]
     r_flag = {r["id"]: r for r in retrieval.get("flag", {}).get("rows", [])}
     for g in retrieval.get("graph", {}).get("rows", []):
         f = r_flag.get(g["id"])
@@ -239,7 +292,8 @@ def failure_cases(retrieval: dict, generation: dict | None) -> list[dict]:
 def render_report(res: dict) -> str:
     L = ["# Kanon evaluation report", "",
          f"- Question set: `{res['questions_file']}` (sha256 `{res['questions_sha256'][:12]}`), "
-         f"{res['n_questions']} questions, pinned today = {res['today']}, k = {res['k']}",
+         f"{res['n_questions']} questions ({res.get('n_qa', res['n_questions'])} qa, "
+         f"{res.get('n_resolver', 0)} resolver), pinned today = {res['today']}, k = {res['k']}",
          f"- Categories: {', '.join(f'{c} ({n})' for c, n in sorted(res['categories'].items()))}", ""]
 
     L += ["## Primary metric (generation): superseded-citation rate, paired with answer rate", ""]
@@ -264,6 +318,31 @@ def render_report(res: dict) -> str:
     L += ["", "Recall@k and MRR are over the questions with a non-empty expected set; "
           "superseded-chunk rate is pooled over every retrieved chunk.", ""]
 
+    rows = res.get("resolver", {}).get("rows", [])
+    L += ["## Resolver (store level, deterministic, no LLM) — separate from the two blocks above", ""]
+    if not rows:
+        L += ["No resolver questions in the pinned set.", ""]
+    else:
+        s = res["resolver"]["summary"]
+        L += [f"- graph (bi-temporal resolver): {s['graph_correct']}/{s['questions']} correct",
+              f"- flag (status column today): {s['flag_correct']}/{s['questions']} correct",
+              "- `none` has no authority information at all, so it has no resolver row.",
+              "- Caveat: these are reg guides with metadata but no text. The flag stand-in is the "
+              "status column, which a flag RAG system could beat by reading a withdrawal notice's "
+              "prose. Read this block as 'what each authority model knows', not as RAG accuracy.",
+              "- Not independent: expected sets were written from the evidence strings and then "
+              "checked against this same store, so graph agreement confirms the parser and resolver "
+              "encode the evidence. The informative column is flag's.", "",
+              "| id | category | doc @ as_of | expected | graph | flag (today's status) |",
+              "|---|---|---|---|---|---|"]
+        for r in rows:
+            exp = r["expected"] if r["expect_resolved"] else "unresolved -> abstain"
+            g = r["graph"] if r["graph_resolved"] else "unresolved"
+            L.append(f"| {r['id']} | {r['category']} | {r['doc_id']} @ {r['as_of']} | {exp} | "
+                     f"{g} {'✓' if r['graph_correct'] else '✗'} | {r['flag'] or '—'} "
+                     f"{'✓' if r['flag_correct'] else '✗'} |")
+        L.append("")
+
     L += ["## Named cases: flag fails, graph succeeds", ""]
     for cat, label in THESIS_CATEGORIES.items():
         found = [c for c in res["failure_cases"] if c["category"] == cat]
@@ -284,7 +363,8 @@ def render_report(res: dict) -> str:
         L += [f"- {n}" for n in res["coverage_notes"]]
     L += ["", "## Notes", "",
           "- 'Superseded' is decided by `AuthorityStore.governs` against each question's pinned "
-          "as_of — never by a model. Operating-experience citations are exempt (they record events).",
+          "as_of — never by a model. Records (operating experience, FR rules and notices) are "
+          "exempt: they record what happened, not what governs.",
           "- Reranker run (mode none ± BAAI/bge-reranker-v2-m3): not run; hook only (`Reranker`).",
           "- Tier C judge annotations, when enabled, are advisory and live in the traces; they "
           "do not feed any metric here. Judge shares a provider with the RAG model by default.", ""]
@@ -298,20 +378,23 @@ def run(index: CorpusIndex, store: AuthorityStore, questions_file: Path, k: int,
     problems = check_questions(store, today, questions)
     if problems:   # halt: grading against an underivable expected answer is worse than no grade
         raise ValueError("question set does not match the authority store:\n  " + "\n  ".join(problems))
+    qa = [q for q in questions if q.type == "qa"]
+    resolver = [resolver_row(q, store, today) for q in questions if q.type == "resolver"]
     res = {"questions_file": str(questions_file), "questions_sha256": sha, "today": str(today),
-           "k": k, "n_questions": len(questions),
+           "k": k, "n_questions": len(questions), "n_qa": len(qa), "n_resolver": len(resolver),
            "categories": {c: sum(q.category == c for q in questions) for c in {q.category for q in questions}},
-           "coverage_notes": notes, "retrieval": {}, "generation": None}
+           "coverage_notes": notes, "retrieval": {}, "generation": None,
+           "resolver": {"summary": summarise_resolver(resolver), "rows": resolver}}
     for m in modes:
-        rows = retrieval_eval(index, store, today, questions, m, k)
+        rows = retrieval_eval(index, store, today, qa, m, k)
         res["retrieval"][m] = {"summary": summarise_retrieval(rows), "rows": rows}
     if llm is not None:
         res["generation"] = {}
         for m in modes:
-            rows = generation_eval(llm, index, store, today, questions, m, trace_dir,
+            rows = generation_eval(llm, index, store, today, qa, m, trace_dir,
                                    judge_llm, judge_model)
             res["generation"][m] = {"summary": summarise_generation(rows), "rows": rows}
-    res["failure_cases"] = failure_cases(res["retrieval"], res["generation"])
+    res["failure_cases"] = failure_cases(res["retrieval"], res["generation"], resolver)
     return res
 
 

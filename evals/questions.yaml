@@ -1,68 +1,102 @@
 # PINNED — do not edit mid-run; editing invalidates comparison.
 # (kanon-eval records this file's sha256 in every report so a reader can tell which set was used.)
 #
+# Version 2 (2026-11-14), revised BEFORE the first run (no run used v1, so the comparison is intact).
+#   v1 -> v2: records (FR rules, FR notices, enforcement letters) are no longer requirements, and
+#   reg guides now exist as metadata-only rows. Questions whose governing answer was an FR notice
+#   (v1 q18-q22) became store-level `resolver` questions on the guide itself. Questions on which
+#   flag and graph necessarily agree are labelled `control`. Added q24 (the 2006 side of the Part 52
+#   boundary, from data/EVALUATION.md 4.3) and resolver questions r01-r13.
+#
 # Frozen question set for the none / flag / graph comparison.
-# Written 2026-11-14 against data/manifest.jsonl (22 rows) and data/labels/supersession_evidence.jsonl
-# (34 rows), as described in data/ACCESS_REPORT.md. Every expected key is a manifest row, and
-# `kanon-eval` refuses to run if any expected key is missing from the store or does not govern on the
-# question's as_of (evals.check_questions). "M<n>" = line n of data/manifest.jsonl, "E<n>" = line n of
-# data/labels/supersession_evidence.jsonl. Wording quoted below was read from the raw files on disk.
+# Sources: data/manifest.jsonl (22 rows), data/labels/supersession_evidence.jsonl (34 rows),
+# data/labels/rg_index.jsonl (124 rows), data/ACCESS_REPORT.md and data/EVALUATION.md.
+# References: "M<n>" = line n of manifest.jsonl, "E<n>" = line n of supersession_evidence.jsonl,
+# "I<n>" = line n of rg_index.jsonl. Text quoted below was read from the raw files on disk.
+# kanon-eval refuses to run if any expected key is missing from the store or does not govern on
+# that question's as_of (evals.check_questions).
 #
-# Schema:
-#   id, category, query_kind (current | time_anchored), as_of (time_anchored only; current uses `today`),
-#   question, expected: ["DOC@REV", ...] — the documents that govern the answer on as_of.
-#   expected: [] means no governing document is recorded for that date: the correct output is to abstain.
+# Two question types, scored separately (never pooled):
+#   type: qa (default) — goes through retrieval and the agent in all three modes.
+#     query_kind: current | time_anchored. as_of only for time_anchored (current uses `today`).
+#     expected: ["DOC@REV", ...]: the documents that govern the answer on as_of. Records (FR
+#     documents, EA-98-155) may also appear as expected citations, but are never the governing answer.
+#     expected: [] means nothing governs on that date, so the correct output is to abstain.
+#   type: resolver — store level, deterministic, no LLM: is resolve_authority(doc_id, as_of) equal
+#     to `expected`, and does it agree with `expect_resolved`? Used for reg guides, which have
+#     metadata but no text, so they can't be retrieved or cited. The flag baseline for these is
+#     "the status column today" (the revisions currently marked active). There is no `none` baseline.
 #
-# Why 23 questions and these categories: the corpus is 10 CFR 50.59 (6 point-in-time versions), the FR
-# rules that amended it, FR notices about RG issuance/withdrawal, and EA-98-155. See coverage_notes for
-# what the data could NOT support (partial, cross-family, effective-before-issue, FitzPatrick MP-033.05).
+# Categories: anchor | time_anchored | effective_after_issue | cross_family | conflict_window | control.
+#   control = flag and graph necessarily give the same answer. Kept as sanity checks; they count
+#   toward no thesis claim.
 
 today: 2026-11-14
 
 coverage_notes:
-  - "Partial supersession: not tested. The store models each 10 CFR 50.59 amendment as a full successor version (derived 'full' edges), and the one guide-split case (RG 1.3/1.4/1.5 -> RG 1.183 + RG 1.195) is parsed as cross_family edges between guides that are not in the manifest (www.nrc.gov blocks downloads; ACCESS_REPORT section C). No partial edge exists in the store, so a 'partial' question would grade the system against an edge we never recorded."
-  - "Cross-family supersession: not tested. supersession.py does parse cross_family edges from the evidence (e.g. RG-1.84 Rev 32 -> RG-1.85 Rev 31, RG-1.78 Rev 1 -> RG-1.95 Rev 1, inferred from E21/E24), but no regulatory guide is a row in data/manifest.jsonl, so neither side of any such edge can govern (store.governs needs a documents row with effective_from). An expected answer cannot be derived from the store. Questions about RG 1.1 and RG 1.3/1.4/1.5 are therefore labelled 'withdrawn' and grade only against the FR withdrawal notice."
-  - "Effective date precedes issue date: not tested. ACCESS_REPORT: 'Effective date earlier than issue date: none found.' The real opposite case — the 1999 50.59 rule issued 1999-10-04 but effective 2001-03-13 (M8, E2, E4), and the 2024/2025 amendments effective 30 days after publication (M12, M13) — is tested as category 'effective_after_issue'. It defeats recency ranking the same way but is NOT the case the spec names, and is not reported as such."
-  - "Anchor (EA-98-155, April 1996): the 1996 CFR edition of Title 10 is not on GovInfo, and the earliest recorded 50.59 version (M1, the 1-1-97 edition) is recorded effective 1996-08-28. So nothing in the store governs on 1996-04-01 and q02 expects abstention. M1's notes say paragraphs (a)-(c) were already in force in April 1996; modelling that needs a partial edge for 61 FR 39278 (which only added (d) and (e)), which is not recorded."
-  - "FitzPatrick MP-033.05 Rev 28 (ML22027A362): not included. The inspection report's identity was confirmed in a browser, but its bytes are not in the corpus (HTTP 403), and MP-033.05 itself is not public (ACCESS_REPORT rows A, H)."
-  - "Four FR notices have no effective_from (M9, M18, M20, M21). store.governs can never return True for them, so no question relies on them: they would count as 'not governing' citations in every mode for a data reason, not an authority reason."
+  - "Effective date AFTER issue date: real and tested. (1) The 1999 rewrite of 10 CFR 50.59 was published 1999-10-04 but took effect 2001-03-13, a date set by a different document (M8, E2, E4, E6): q04, q05, q06. (2) The 2024 and 2025 amendments each took effect 30 days after publication (M12, M13): q11, q12, q13. (3) RG 1.187 Rev 2 is dated 06/2020 in the index, but 'takes effect on July 7, 2020' (E33): resolver r03 (metadata only, no guide text)."
+  - "Cross-family supersession: tested at the STORE level only (resolver questions r05, r06, r08, r09, r11, r13). There is no guide text in the corpus, so it is NOT measurable at the retrieval or generation level. Those flag-baseline answers are the status column; a flag RAG system could still read the right successor from the FR withdrawal notice's prose, so the store-level comparison understates flag. Where the source names no successor revision (E13 'incorporated into RG 1.82'; E17 'RG 1.183 ... and RG 1.195'), the loader pins the revision in effect on the withdrawal date, with confidence 'inferred'."
+  - "Partial supersession: none in the data. Every 50.59 amendment is modelled as a full successor of the compiled text. The one genuine partial case, 61 FR 39278 adding (d) and (e) while (a)-(c) kept governing, can't be modelled because no pre-1996-08-28 version is recorded (EVALUATION 4.2 G). No license-amendment page swaps were obtainable."
+  - "Effective date BEFORE issue date (the case the spec names): no instance exists. ACCESS_REPORT says 'none found', and EVALUATION 4.2 H confirms that no row has effective_from < issue_date."
+  - "Conflict window, a fourth real pattern: the index dates the incorporation into the successor earlier than the formal withdrawal (RG 1.85: 06/2003 vs 2004-06-18; RG 1.182: 05/2012 vs 2012-11-27). Inside the window the resolver reports the authority as UNRESOLVED and the correct output is abstention (r10, r12)."
+  - "Anchor (EA-98-155, April 1996): the earliest recorded 50.59 version (M1) took effect 1996-08-28, and the 1996 CFR edition is not on GovInfo, so q02 expects abstention. M1's text for (a)-(c) did govern in April 1996, but recording that needs a pre-1996 version row."
+  - "FitzPatrick MP-033.05 Rev 28 (ML22027A362): not included. The report's bytes could not be downloaded (HTTP 403), and MP-033.05 itself is not public (ACCESS_REPORT rows A, H)."
+  - "FR PDFs carry first- and last-page bleed from other agencies' documents. No answer here depends on those pages: the 50.59 instructions cited are on interior pages, as given in each manifest row's notes."
+  - "Discriminating QA questions: 14 (q02-q14, q24), all about one regulation and one mechanism (point-in-time lookup). That is enough for a demonstration, not for statistically meaningful retrieval metrics (EVALUATION 4.3). In mode graph the pre-filter leaves one 50.59 version, so graph recall is close to trivially high."
 
 questions:
-  # ---- anchor scenario ---------------------------------------------------------------------------
+  # ======================================================================================
+  # QA — anchor
+  # ======================================================================================
   - id: q01
-    # M6 (current 50.59, eCFR 2025-01-29, status active) + M22 (EA-98-155, operating experience).
-    # Verbatim anchor question from KANON.md, asked about today.
-    category: anchor
+    # CONTROL (flag == graph). The anchor question as asked in KANON.md, as of today.
+    # M6 (current 50.59, eCFR 2025-01-29) governs; M22 (EA-98-155) is a record, an expected
+    # precedent citation.
+    category: control
     query_kind: current
     question: "An engineer wants to replace a primary coolant pump. What requirements currently govern that change, does it need prior NRC approval, and has anything gone wrong when this was done before?"
     expected: ["10CFR50.59@2025-01-29", "EA-98-155@0"]
 
   - id: q02
     # EA-98-155 (M22): modification Request No. 120, new primary cooling pump and motor, April 1996.
-    # Earliest recorded 50.59 version M1 has effective_from 1996-08-28 > 1996-04-01; no other version
-    # covers the date. Correct behaviour per the store: abstain (see coverage_notes).
+    # The earliest recorded 50.59 version (M1) has effective_from 1996-08-28 > 1996-04-01, and no
+    # other version covers the date. Correct per the store: abstain. flag answers from today's text.
     category: anchor
     query_kind: time_anchored
     as_of: 1996-04-01
     question: "In April 1996 a research reactor licensee installed a new primary cooling pump and motor and removed the pump discharge check valve internals. What did 10 CFR 50.59 require for that change at the time, and did it need prior NRC approval?"
     expected: []
 
+  # ======================================================================================
+  # QA — 10 CFR 50.59 point-in-time (EVALUATION 4.3 boundary questions)
+  # ======================================================================================
   - id: q03
-    # EA-98-155 letter dated May 13, 1998 (M22). On 1998-05-13 the governing 50.59 is M1
-    # (effective 1996-08-28 to 2001-03-13). M1 (a)(1): "...without prior Commission approval, unless
-    # the proposed change, test or experiment involves a change in the technical specifications
-    # incorporated in the license or an unreviewed safety question."
+    # The EA-98-155 letter is dated May 13, 1998 (M22). M1 governs 1996-08-28..2001-03-13.
+    # M1 (a)(1): "...without prior Commission approval, unless the proposed change, test or
+    # experiment involves a change in the technical specifications incorporated in the license or
+    # an unreviewed safety question."
     category: time_anchored
     query_kind: time_anchored
     as_of: 1998-05-13
     question: "When the NRC issued enforcement action EA-98-155 in May 1998, what test did 10 CFR 50.59 use to decide whether a facility change needed prior Commission approval?"
     expected: ["10CFR50.59@1996-08-28", "EA-98-155@0"]
 
-  # ---- 1999 rule: issued 1999-10-04, effective 2001-03-13 ------------------------------------------
+  - id: q14
+    # Boundary: (d)/(e) added 1996-08-28, after side. M1 governs on 1997-06-01. M1 (d): "The
+    # provisions of this section apply to each nuclear power reactor licensee that has submitted the
+    # certification of permanent cessation of operations required under § 50.82(a)(1)(i)."
+    # Added by FR-61-39278 (M7, E1).
+    category: time_anchored
+    query_kind: time_anchored
+    as_of: 1997-06-01
+    question: "In 1997, did 10 CFR 50.59 apply to a nuclear power reactor licensee that had certified permanent cessation of operations?"
+    expected: ["10CFR50.59@1996-08-28"]
+
   - id: q04
-    # M8: FR-64-53582 issued 1999-10-04, effective_from 2001-03-13. E2: "Sections 50.59, ... become
-    # effective 90 days after issuance of applicable regulatory guidance." E4: effective date "is March
-    # 13, 2001." So on 2000-06-01 M1 (unreviewed-safety-question text) still governs.
+    # Deferral window [1999-10-04, 2001-03-12]. M8: FR-64-53582 issued 1999-10-04, effective
+    # 2001-03-13. E2: "Sections 50.59, ... become effective 90 days after issuance of applicable
+    # regulatory guidance." E4: effective date "is March 13, 2001." M1 still governs.
+    # Traps: FR-64-53582 (a record, prints the new text) and M6 (active today).
     category: effective_after_issue
     query_kind: time_anchored
     as_of: 2000-06-01
@@ -70,8 +104,8 @@ questions:
     expected: ["10CFR50.59@1996-08-28"]
 
   - id: q05
-    # Trap: M2 is the CFR edition "revised as of 1-1-01", which prints the NEW text, but M2 is recorded
-    # effective 2001-03-13 (E6: "...was confirmed as Mar. 13, 2001."). On 2001-01-01 M1 governs.
+    # Trap: M2 is the CFR edition "revised as of 1-1-01" and prints the NEW text, but it took effect
+    # 2001-03-13 (E6: "...was confirmed as Mar. 13, 2001."). M1 governs on 2001-01-01.
     # M1 (b)(1): records "must include a written safety evaluation which provides the bases for the
     # determination that the change, test, or experiment does not involve an unreviewed safety question."
     category: effective_after_issue
@@ -81,7 +115,7 @@ questions:
     expected: ["10CFR50.59@1996-08-28"]
 
   - id: q06
-    # On 2001-04-01 M2 governs (2001-03-13 to 2001-12-14). M2 (c)(1): changes without "obtaining a
+    # After the deferral: M2 governs 2001-03-13..2001-12-14. M2 (c)(1): changes without "obtaining a
     # license amendment pursuant to § 50.90 only if: (i) A change to the technical specifications
     # incorporated in the license is not required, and (ii) ... does not meet any of the criteria in
     # paragraph (c)(2)".
@@ -91,11 +125,10 @@ questions:
     question: "In April 2001, under 10 CFR 50.59, when did a licensee have to obtain a license amendment under 10 CFR 50.90 before implementing a change to its facility?"
     expected: ["10CFR50.59@2001-03-13"]
 
-  # ---- point-in-time questions across the 50.59 versions -------------------------------------------
   - id: q07
-    # M2 governs 2001-06-01. Definition (a)(1) "Change means a modification or addition to, or removal
-    # from, the facility or procedures that affects a design function..." (same wording in M3, which
-    # does not govern until 2001-12-14).
+    # M2 governs 2001-06-01. (a)(1): "Change means a modification or addition to, or removal from,
+    # the facility or procedures that affects a design function..." (same wording in M3, which does
+    # not govern until 2001-12-14; flag surfaces M6).
     category: time_anchored
     query_kind: time_anchored
     as_of: 2001-06-01
@@ -103,8 +136,8 @@ questions:
     expected: ["10CFR50.59@2001-03-13"]
 
   - id: q08
-    # M2 (b): "...a reactor licensee whose license has been amended to allow possession but not
-    # operation of the facility." M3 (from 2001-12-14, E7 / M10) inserts "of nuclear fuel,".
+    # Boundary: "of nuclear fuel," inserted 2001-12-14 (M10, E7), before side. M2 (b): "...a reactor
+    # licensee whose license has been amended to allow possession but not operation of the facility."
     category: time_anchored
     query_kind: time_anchored
     as_of: 2001-09-01
@@ -112,18 +145,30 @@ questions:
     expected: ["10CFR50.59@2001-03-13"]
 
   - id: q09
-    # M3 governs 2005-01-01 (2001-12-14 to 2007-09-27). M3 (b): "...amended to allow possession of
-    # nuclear fuel, but not operation of the facility." Change made by FR-66-64737 (M10, E7).
+    # Same boundary, after side. M3 governs 2001-12-14..2007-09-27. M3 (b): "...amended to allow
+    # possession of nuclear fuel, but not operation of the facility."
     category: time_anchored
     query_kind: time_anchored
     as_of: 2005-01-01
     question: "In 2005, how did 10 CFR 50.59(b) describe a reactor licensee whose license had been amended so that it no longer authorized operation of the facility?"
     expected: ["10CFR50.59@2001-12-14"]
 
+  - id: q24
+    # NEW in v2. Boundary: Part 52 added to (b) on 2007-09-27 (FR-72-49352, M11, E8), before side.
+    # M3 governs on 2006-01-01. M3 (b) reads "...operation of a production or utilization facility,
+    # including the holder of a license authorizing operation of a nuclear power reactor that has
+    # submitted the certification..." The 1-1-02 edition text contains no "part 52" at all (checked
+    # with pdftotext).
+    category: time_anchored
+    query_kind: time_anchored
+    as_of: 2006-01-01
+    question: "In 2006, did 10 CFR 50.59 apply to holders of combined licenses issued under 10 CFR Part 52?"
+    expected: ["10CFR50.59@2001-12-14"]
+
   - id: q10
-    # M4 governs 2010-06-01 (2007-09-27 to 2024-08-15). M4 (b): "...holder of an operating license
-    # issued under this part or a combined license issued under part 52 of this chapter..." M3's (b)
-    # does not mention Part 52. Change by FR-72-49352 (M11, E8).
+    # Same boundary, after side. M4 governs 2007-09-27..2024-08-15. M4 (b): "...holder of an
+    # operating license issued under this part or a combined license issued under part 52 of this
+    # chapter..."
     category: time_anchored
     query_kind: time_anchored
     as_of: 2010-06-01
@@ -131,9 +176,9 @@ questions:
     expected: ["10CFR50.59@2007-09-27"]
 
   - id: q11
-    # FR-89-57717 (M12) issued 2024-07-16, effective 2024-08-15; E9: "amend paragraph (c)(1)(i) by
-    # removing the text 'A change' and adding in its place the text 'An amendment'." On 2024-08-01 M4
-    # governs: "(i) A change to the technical specifications incorporated in the license is not required".
+    # FR-89-57717 (M12): issued 2024-07-16, effective 2024-08-15. E9: "amend paragraph (c)(1)(i) by
+    # removing the text 'A change' and adding in its place the text 'An amendment'." M4 governs on
+    # 2024-08-01: "(i) A change to the technical specifications incorporated in the license is not required".
     category: effective_after_issue
     query_kind: time_anchored
     as_of: 2024-08-01
@@ -141,8 +186,8 @@ questions:
     expected: ["10CFR50.59@2007-09-27"]
 
   - id: q12
-    # Same paragraph, after the 2024-08-15 effective date: M5 governs (2024-08-15 to 2025-01-29),
-    # (c)(1)(i) "An amendment to the technical specifications...". M12 also governs from 2024-08-15.
+    # After 2024-08-15: M5 governs (2024-08-15..2025-01-29). (c)(1)(i): "An amendment to the
+    # technical specifications...".
     category: effective_after_issue
     query_kind: time_anchored
     as_of: 2024-09-01
@@ -150,105 +195,202 @@ questions:
     expected: ["10CFR50.59@2024-08-15"]
 
   - id: q13
-    # FR-89-106234 (M13) issued 2024-12-30, effective 2025-01-29 (E10: "revise paragraph (b)"). On
-    # 2025-01-15 M5 governs; its (b) ends "...possession of nuclear fuel but not operation of the
-    # facility." with no non-power facility clause. M6 (from 2025-01-29) adds "or a non-power production
-    # or utilization facility that has permanently ceased operations."
+    # FR-89-106234 (M13): issued 2024-12-30, effective 2025-01-29 (E10: "revise paragraph (b)").
+    # M5 governs on 2025-01-15; its (b) ends "...possession of nuclear fuel but not operation of the
+    # facility." M6 (from 2025-01-29) adds "or a non-power production or utilization facility that has
+    # permanently ceased operations."
     category: effective_after_issue
     query_kind: time_anchored
     as_of: 2025-01-15
     question: "On January 15, 2025, did 10 CFR 50.59(b) cover non-power production or utilization facilities that have permanently ceased operations?"
     expected: ["10CFR50.59@2024-08-15"]
 
-  - id: q14
-    # M1 governs 1997-06-01. M1 (d): "The provisions of this section apply to each nuclear power
-    # reactor licensee that has submitted the certification of permanent cessation of operations
-    # required under § 50.82(a)(1)(i)." Added by FR-61-39278 (M7, E1), effective 1996-08-28.
-    category: time_anchored
-    query_kind: time_anchored
-    as_of: 1997-06-01
-    question: "In 1997, did 10 CFR 50.59 apply to a nuclear power reactor licensee that had certified permanent cessation of operations?"
-    expected: ["10CFR50.59@1996-08-28"]
-
-  # ---- current state -------------------------------------------------------------------------------
+  # ======================================================================================
+  # QA — controls (flag == graph by construction)
+  # ======================================================================================
   - id: q15
-    # M6 (b) full current text, incl. "...or a non-power production or utilization facility that has
-    # permanently ceased operations."
-    category: current
+    # CONTROL. M6 (b), the full current text, incl. "...or a non-power production or utilization
+    # facility that has permanently ceased operations."
+    category: control
     query_kind: current
     question: "Which licensees and facilities does 10 CFR 50.59 currently apply to?"
     expected: ["10CFR50.59@2025-01-29"]
 
   - id: q16
-    # M6 (c)(1)(i) "An amendment to the technical specifications incorporated in the license is not
-    # required" and (c)(2) criteria.
-    category: current
+    # CONTROL. M6 (c)(1)(i): "An amendment to the technical specifications incorporated in the
+    # license is not required", plus the (c)(2) criteria.
+    category: control
     query_kind: current
     question: "Under the current 10 CFR 50.59, when must a licensee obtain a license amendment before making a change to its facility?"
     expected: ["10CFR50.59@2025-01-29"]
 
   - id: q17
-    # M13 (FR-89-106234, effective 2025-01-29, revises 50.59(b), E10) and M6 (resulting text). No
-    # later amendment is in the eCFR versions list (raw/ecfr/versions_title10_part50_sec50.59.json).
-    category: current
+    # CONTROL. Governing answer: M6. FR-89-106234 (M13, a rulemaking record) is an expected history
+    # citation: effective 2025-01-29, revises (b) (E10). Its 50.59 instruction is on PDF page 18,
+    # not in the page-1 bleed (M13 notes).
+    category: control
     query_kind: current
     question: "Which Federal Register rule most recently revised 10 CFR 50.59(b), and when did it take effect?"
-    expected: ["FR-89-106234@0", "10CFR50.59@2025-01-29"]
+    expected: ["10CFR50.59@2025-01-29", "FR-89-106234@0"]
 
-  - id: q18
-    # M16 FR-86-31346 (effective 2021-06-11). E34: "This Revision (i.e., Revision 3) addresses a
-    # clarification to the RG in response to post-promulgation comments on RG 1.187, Revision 2."
-    # Limitation: the store records no edges between the RG 1.187 notices, so M14/M15 also "govern"
-    # today and citing them is not counted as superseded.
-    category: current
-    query_kind: current
-    question: "What is the latest revision of Regulatory Guide 1.187 on implementing 10 CFR 50.59, and what did that revision address?"
-    expected: ["FR-86-31346@0"]
-
-  # ---- RG 1.187 point in time (revision notices) ---------------------------------------------------
-  - id: q19
-    # M14 FR-84-25077 effective 2019-05-30 (E32: "Revision 1 to RG 1.187 is available on May 30, 2019.").
-    # M15 (Rev 2, 2020-07-07) and M16 (Rev 3, 2021-06-11) do not govern on 2019-12-01.
-    category: time_anchored
-    query_kind: time_anchored
-    as_of: 2019-12-01
-    question: "As of December 2019, what was the most recent revision of Regulatory Guide 1.187 (guidance for implementing 10 CFR 50.59) that the NRC had issued?"
-    expected: ["FR-84-25077@0"]
-
-  - id: q20
-    # M15 FR-85-40696 effective 2020-07-07 (E33: "Revision 2 to RG 1.187 takes effect on July 7, 2020.").
-    # M16 (Rev 3) does not govern until 2021-06-11.
-    category: time_anchored
-    query_kind: time_anchored
-    as_of: 2020-08-01
-    question: "As of August 2020, which revision of Regulatory Guide 1.187 had most recently taken effect?"
-    expected: ["FR-85-40696@0"]
-
-  # ---- withdrawn guides (status only; see coverage_notes on cross-family) --------------------------
-  - id: q21
-    # M17 FR-80-24293 effective 2015-04-30. E12: "DATES: Effective April 30, 2015, the NRC withdraws
-    # RG 1.1." E13: "...its guidance has been incorporated into RG 1.82, 'Water Sources for Long-Term
-    # Recirculation Cooling Following a Loss-of-Coolant Accident.'" (RG 1.82 itself not in corpus.)
-    category: withdrawn
-    query_kind: current
-    question: "Is Regulatory Guide 1.1 on net positive suction head for emergency core cooling and containment heat removal pumps still in effect, and where is its guidance now?"
-    expected: ["FR-80-24293@0"]
-
-  - id: q22
-    # M19 FR-81-88710 effective 2016-12-08. E17: "These three RGs are being withdrawn because the
-    # guidance contained in them has been superseded and is now incorporated into RG 1.183, ... and
-    # RG 1.195, ..." (RG 1.183 / RG 1.195 themselves not in corpus.)
-    category: withdrawn
-    query_kind: current
-    question: "Are Regulatory Guides 1.3, 1.4 and 1.5 still in effect, and if not, which guides contain their guidance?"
-    expected: ["FR-81-88710@0"]
-
-  # ---- precedent (operating experience) ------------------------------------------------------------
   - id: q23
-    # M22 EA-98-155: "The first violation involved the failure to adequately perform a required 10 CFR
-    # 50.59 evaluation of modification Request No. 120 which installed a new primary cooling pump and
-    # motor ..." Event record only: not scored by retrieval recall (search() excludes it by design).
-    category: precedent
+    # CONTROL (precedent). M22 EA-98-155, a record: "The first violation involved the failure to
+    # adequately perform a required 10 CFR 50.59 evaluation of modification Request No. 120 which
+    # installed a new primary cooling pump and motor ..." Not scored for retrieval recall, because
+    # search_current_requirements never returns records.
+    category: control
     query_kind: current
     question: "Has a licensee been cited for an inadequate 10 CFR 50.59 evaluation when replacing a primary coolant pump?"
     expected: ["EA-98-155@0"]
+
+  # ======================================================================================
+  # RESOLVER — store level, deterministic (reg guides: metadata only, no text)
+  # flag baseline = revisions of doc_id with status 'active' today.
+  # ======================================================================================
+  - id: r01
+    # CONTROL. v1 q18 asked this with the FR-86-31346 notice as the answer. RG-1.187 Rev 3 (I110)
+    # is active; E34. flag also says Rev 3.
+    type: resolver
+    category: control
+    doc_id: RG-1.187
+    query_kind: current
+    question: "Which revision of RG 1.187 governs today?"
+    expected: ["RG-1.187@3"]
+
+  - id: r02
+    # Was v1 q19 (FR-84-25077 as the answer). Rev 1 index-dated 05/2019 (I112), E32 "available on
+    # May 30, 2019". Rev 2 not until 2020-07-07. flag: Rev 3.
+    type: resolver
+    category: time_anchored
+    doc_id: RG-1.187
+    query_kind: time_anchored
+    as_of: 2019-12-01
+    question: "Which revision of RG 1.187 governed on 2019-12-01?"
+    expected: ["RG-1.187@1"]
+
+  - id: r03
+    # Rev 2 is index-dated 06/2020 (I111), but E33 says "Revision 2 to RG 1.187 takes effect on July
+    # 7, 2020." (load_labels overrides effective_from). Issue-date recency would say Rev 2; the
+    # resolver says Rev 1. flag: Rev 3.
+    type: resolver
+    category: effective_after_issue
+    doc_id: RG-1.187
+    query_kind: time_anchored
+    as_of: 2020-06-15
+    question: "Which revision of RG 1.187 governed on 2020-06-15?"
+    expected: ["RG-1.187@1"]
+
+  - id: r04
+    # Was v1 q20 (FR-85-40696 as the answer). Rev 2 governs 2020-07-07 until Rev 3 (index 06/2021,
+    # I110). flag: Rev 3.
+    type: resolver
+    category: time_anchored
+    doc_id: RG-1.187
+    query_kind: time_anchored
+    as_of: 2020-08-01
+    question: "Which revision of RG 1.187 governed on 2020-08-01?"
+    expected: ["RG-1.187@2"]
+
+  - id: r05
+    # Was v1 q21 (FR-80-24293 as the answer). E12: "Effective April 30, 2015, the NRC withdraws RG
+    # 1.1." E13: "...its guidance has been incorporated into RG 1.82..." (revision not named; pinned
+    # to Rev 4, in effect on 2015-04-30 per I70, confidence inferred). flag: [] (RG 1.1 withdrawn,
+    # nothing active).
+    type: resolver
+    category: cross_family
+    doc_id: RG-1.1
+    query_kind: time_anchored
+    as_of: 2016-01-01
+    question: "What governs the subject matter of RG 1.1 (NPSH for ECCS and containment heat removal pumps) on 2016-01-01?"
+    expected: ["RG-1.82@4"]
+
+  - id: r06
+    # Chain: RG 1.1 -cross_family-> RG 1.82 Rev 4 -full-> RG 1.82 Rev 5 (index 08/2022, I69).
+    # flag: [] for RG-1.1.
+    type: resolver
+    category: cross_family
+    doc_id: RG-1.1
+    query_kind: current
+    question: "What governs the subject matter of RG 1.1 today?"
+    expected: ["RG-1.82@5"]
+
+  - id: r07
+    # Was part of v1 q22. Before the 2016-12-08 withdrawal (E17), RG 1.3 Rev 2 still governs.
+    # flag: [] (RG 1.3 withdrawn today), so flag misses that it governed then.
+    type: resolver
+    category: time_anchored
+    doc_id: RG-1.3
+    query_kind: time_anchored
+    as_of: 2016-06-01
+    question: "Which revision of RG 1.3 governed on 2016-06-01?"
+    expected: ["RG-1.3@2"]
+
+  - id: r08
+    # One-to-many cross-family. E17 (2016-12-08): "...incorporated into RG 1.183, ... and RG 1.195".
+    # Pinned to RG-1.183 Rev 0 (Rev 1 not until 10/2023, I106/I107) and RG-1.195 Rev 0 (I121).
+    type: resolver
+    category: cross_family
+    doc_id: RG-1.3
+    query_kind: time_anchored
+    as_of: 2017-01-01
+    question: "What governs the subject matter of RG 1.3 on 2017-01-01?"
+    expected: ["RG-1.183@0", "RG-1.195@0"]
+
+  - id: r09
+    # E24: "01/2002 – Guidance from RG 1.95 has been updated and incorporated into Revision 1 of RG
+    # 1.78". E26 (FR, 2002-01-08) gives the withdrawal. RG-1.78 Rev 1 is index-dated 12/2001 (I123).
+    # flag: [].
+    type: resolver
+    category: cross_family
+    doc_id: RG-1.95
+    query_kind: time_anchored
+    as_of: 2003-01-01
+    question: "What governs the subject matter of RG 1.95 on 2003-01-01?"
+    expected: ["RG-1.78@1"]
+
+  - id: r10
+    # Conflict window. E21 dates the incorporation into RG 1.84 Rev 32 to 06/2003; E22/E23 date the
+    # withdrawal 2004-06-18. Between them the resolver reports the authority as unresolved, so the
+    # correct output is abstention. flag: [] (it would confidently say nothing governs).
+    type: resolver
+    category: conflict_window
+    doc_id: RG-1.85
+    query_kind: time_anchored
+    as_of: 2003-09-01
+    question: "What governs the subject matter of RG 1.85 on 2003-09-01?"
+    expected: []
+    expect_resolved: false
+
+  - id: r11
+    # After the window: E23 "...withdrawn because the guidance in Regulatory Guide 1.85 has been
+    # updated and incorporated into Revision 32 of Regulatory Guide 1.84." flag: [].
+    type: resolver
+    category: cross_family
+    doc_id: RG-1.85
+    query_kind: time_anchored
+    as_of: 2004-07-01
+    question: "What governs the subject matter of RG 1.85 on 2004-07-01?"
+    expected: ["RG-1.84@32"]
+
+  - id: r12
+    # Conflict window. E27: incorporation into RG 1.160 dated 05/2012; E28-E30: withdrawal
+    # 2012-11-27. Unresolved inside the window, so abstain.
+    type: resolver
+    category: conflict_window
+    doc_id: RG-1.182
+    query_kind: time_anchored
+    as_of: 2012-08-01
+    question: "What governs the subject matter of RG 1.182 on 2012-08-01?"
+    expected: []
+    expect_resolved: false
+
+  - id: r13
+    # After the window: E29 "...inclusion of its subject matter in Rev. 3 of RG 1.160". RG-1.160
+    # Rev 3 governs until Rev 4 (index 09/2018, I98). flag: [].
+    type: resolver
+    category: cross_family
+    doc_id: RG-1.182
+    query_kind: time_anchored
+    as_of: 2013-01-01
+    question: "What governs the subject matter of RG 1.182 on 2013-01-01?"
+    expected: ["RG-1.160@3"]
