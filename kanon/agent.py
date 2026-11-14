@@ -74,7 +74,8 @@ class Violation(BaseModel):
 # Authority rules block only in mode 'graph'; in 'none'/'flag' they are *recorded* — that's how
 # the superseded-citation rate is measured for the baselines. Integrity rules (nothing cited,
 # citing text that was never retrieved) block in every mode: there is no answer to measure.
-AUTHORITY_RULES = {"superseded", "not_governing_on_as_of", "unresolved_supersession", "as_of_mismatch"}
+AUTHORITY_RULES = {"superseded", "not_governing_on_as_of", "unresolved_supersession",
+                   "as_of_mismatch", "no_governing_requirement"}
 
 
 class AgentState(TypedDict, total=False):
@@ -173,6 +174,7 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
 
     def retrieve(state: AgentState, config: RunnableConfig) -> dict:
         chunks, records, violations = [], [], []
+        requirement_hits: list[int] = []   # result size of each search_current_requirements call
         for call in state["tool_calls"]:
             tool = by_name.get(call["name"])
             if tool is None:   # the model named a tool that doesn't exist; record and skip
@@ -185,8 +187,19 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
             result = tool.invoke(call["args"], config=config)   # config carries the trace callback
             if call["name"] in ("search_current_requirements", "find_precedent_events"):
                 chunks.extend(result)
+                if call["name"] == "search_current_requirements":
+                    requirement_hits.append(len(result))
             else:
                 records.append(f"{call['name']}({call['args']}): {json.dumps(_dump(result), default=str)}")
+        if requirement_hits and not any(requirement_hits):
+            # The agent asked what governed and nothing did. Precedent records may still have been
+            # found, but an answer built only from records would answer a requirements question
+            # with no requirement — and records are exempt from the governing check, so the gate
+            # couldn't catch it later. Block here and name the gap. (Only reachable in 'graph':
+            # the baselines always return something, which is exactly their failure mode.)
+            violations.append(Violation(rule="no_governing_requirement", detail=(
+                f"no requirement document in the store governed on {state['as_of']} for this "
+                f"question; the record does not reach back that far")))
         unique = list({c.id: c for c in chunks}.values())
         return {"chunks": unique, "records": records,
                 "violations": violations}

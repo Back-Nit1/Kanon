@@ -99,9 +99,9 @@ class StubLLM:
     """Canned structured outputs. Cites whatever it's told to, like a model that trusts the
     retrieved text — the gate, not the model, must catch a bad citation."""
 
-    def __init__(self, cite_revision: str):
+    def __init__(self, cite_revision: str, as_of: date | None = None):
         self.cite_revision = cite_revision
-        self.context: list = []
+        self.as_of = as_of          # None = current-state question; else time-anchored
 
     def with_structured_output(self, schema):
         stub = self
@@ -109,17 +109,22 @@ class StubLLM:
         class Runner:
             def invoke(self, messages):
                 if schema is QueryClass:
+                    if stub.as_of:
+                        return QueryClass(kind="time_anchored", as_of=stub.as_of)
                     return QueryClass(kind="current")
                 return Draft(answer="Per 10 CFR 50.59 ...", citations=[
                     Citation(doc_id="10CFR50.59", revision=stub.cite_revision, page=1)])
         return Runner()
 
     def bind_tools(self, tools):
+        stub = self
+
         class Runner:
             def invoke(self, messages):
                 return AIMessage(content="", tool_calls=[{
                     "name": "search_current_requirements", "id": "1",
-                    "args": {"query": "changes tests and experiments", "as_of": TODAY.isoformat()}}])
+                    "args": {"query": "changes tests and experiments",
+                             "as_of": (stub.as_of or TODAY).isoformat()}}])
         return Runner()
 
 
@@ -151,3 +156,14 @@ def test_baseline_mode_records_but_does_not_block(world):
     # records it (that's the superseded-citation metric) without blocking.
     assert out["decision"] == "answer"
     assert [v.rule for v in out["violations"]] == ["superseded"]
+
+
+def test_graph_abstains_when_nothing_governed_on_the_date(world):
+    # Earliest edition in this fixture is effective 1997-01-01; ask about April 1996 (the anchor
+    # case's date). Graph retrieval finds nothing that governed -> abstain and say why, rather
+    # than answer a requirements question from whatever else turned up.
+    store, index, _ = world
+    out = build_agent(StubLLM("1997-01-01", as_of=date(1996, 4, 1)), index, store, "graph").invoke(
+        {"question": "What governed a pump replacement in April 1996?", "mode": "graph", "today": TODAY})
+    assert out["decision"] == "abstain"
+    assert "no_governing_requirement" in {v.rule for v in out["violations"]}
