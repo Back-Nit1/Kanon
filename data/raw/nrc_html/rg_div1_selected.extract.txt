@@ -1,0 +1,78 @@
+# DOM text extraction (NOT original bytes), SELECTED GUIDES ONLY, from four NRC Division 1 index pages, captured 2026-11-14 via Chrome (RG 1.78, page 1.61-1.80, added in a second viewing session)
+# NOTE: RG 1.84 rows below Rev 31 and RG 1.85 rows below Rev 30 were not transcribed. (www.nrc.gov blocks non-browser HTTP clients with 403). Same format as rg_div1_1.1-1.20.extract.txt.
+# Each "P" line gives the source page for the following guides.
+P ¦ https://www.nrc.gov/regulations-legislation/regulatory-guides-by-division/division-1---power-reactors/regulatory-guides-181---1100
+G ¦ 1.82 ¦ Water Sources for Long-Term Recirculation Cooling Following a Loss-of-Coolant Accident ¦ 01/2022 – DG-1385, Proposed Revision 5 </docs/ML2126/ML21266A185.pdf> || 01/2015 – Periodic Review of Revision 4 – Revise </docs/ML1434/ML14345A333.pdf> || 04/2012 – Periodic Review of Revision 3 – Revise || 07/2010 – DG-1234, Proposed Revision 4 </docs/ML0928/ML092850003.pdf> || 02/2003 – DG-1107, Proposed Revision 3 </docs/ML0305/ML030550431.pdf> || 07/1995 – DG-1038, Proposed Revision 2 </docs/ML0037/ML003739202.pdf> || 05/1983 – Draft MS 203-4, Proposed Revision 1
+R ¦ 5 ¦ 08/2022 ¦ ¦
+R ¦ 4 ¦ 03/2012 ¦ 01/2015 – PR – Revise ¦ /docs/ML1434/ML14345A333.pdf
+R ¦ 3 ¦ 11/2003 ¦ ¦
+R ¦ 2 ¦ 05/1996 ¦ ¦
+R ¦ 1 ¦ 11/1985 ¦ ¦
+R ¦ 0 ¦ 06/1974 ¦ ¦
+G ¦ 1.83 ¦ Inservice Inspection of Pressurized Water Reactor Steam Generator Tubes(Withdrawn -- See 74 FR 58324, 11/12/2009) ¦
+R ¦ W ¦ 11/2009 ¦ ¦
+R ¦ 1 ¦ 07/1975 ¦ ¦
+R ¦ 0 ¦ 07/1974 ¦ ¦
+G ¦ 1.84 ¦ Design, Fabrication, and Materials Code Case Acceptability, ASME Section III ¦ 01/2023 – DG-1405, Proposed Revision 40 </docs/ML2219/ML22195A282.pdf> || 01/2021 – DG-1366, Proposed Revision 39 </docs/ML2012/ML20120A633.pdf> || 08/2018 – DG-1345, Proposed Revision 38 </docs/ML1811/ML18114A228.pdf> || 03/2016 – DG-1295, Proposed Revision 37 </docs/ML1502/ML15027A002.pdf> || 06/2013 – DG-1230, Proposed Revision 36 </docs/ML1025/ML102590003.pdf> || 06/2009 – DG-1191, Proposed Revision 35 </docs/ML0909/ML090900381.pdf> || 10/2006 – DG-1133, Proposed Revision 34 </docs/ML0612/ML061210377.pdf> || 04/2004 – DG-1124, Proposed Revision 33 </docs/ML0408/ML040850299.pdf> || 12/2001 – DG-1090, Proposed Revision 32(combined RG 1.84 and 1.85) </docs/ML0131/ML013120011.pdf> || 05/1997 – DG-1049, Proposed Revision 31 </docs/ML0037/ML003739376.pdf>
+R ¦ DG ¦ 02/2026 ¦ Issued DG-1446, Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2026/02/27/2026-03993/approval-of-the-2023-edition-of-the-american-society-of-mechanical-engineers-boiler-and-pressure#h-125
+R ¦ 40 ¦ 03/2024 ¦ 07/2024: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2024/07/17/2024-15288/american-society-of-mechanical-engineers-code-cases-and-update-frequency
+R ¦ 39 ¦ 12/2021 ¦ 03/2022: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2022/03/03/2022-04374/approval-of-american-society-of-mechanical-engineers-code-cases
+R ¦ 38 ¦ 10/2019 ¦ 03/2020: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2020/03/16/2020-05086/approval-of-american-society-of-mechanical-engineers-code-cases
+R ¦ 37 ¦ 03/2017 ¦ 01/2018: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2018/01/17/2018-00112/approval-of-american-society-of-mechanical-engineers-code-cases
+R ¦ 36 ¦ 08/2014 ¦ ¦
+R ¦ 35 ¦ 10/2010 ¦ ¦
+R ¦ 34 ¦ 10/2007 ¦ ¦
+R ¦ 33 ¦ 08/2005 ¦ ¦
+R ¦ 32 ¦ 06/2003 ¦ ¦
+R ¦ 31 ¦ 05/1999 ¦ ¦
+G ¦ 1.85 ¦ Materials code case Acceptability - - ASME Section III, Division 1(Withdrawn See -- 69 FR 34202 06/18/2004) ¦ 05/1997 – DG-1049, proposed revision 31 </docs/ML0037/ML003739376.pdf> || 06/2003 – Guidance from Revision 31 of RG 1.85 was incorporated into Revision 32 of RG 1.84
+R ¦ W ¦ 06/2004 ¦ ¦
+R ¦ 31 ¦ 05/1999 ¦ ¦
+R ¦ 30 ¦ 10/1994 ¦ ¦
+G ¦ 1.86 ¦ Termination of Operating Licenses for Nuclear Reactors(Withdrawn -- See 81 FR 53507, 08/12/2016) ¦ 12/2011 – Periodic Review of Revision 0 – Withdraw
+R ¦ W ¦ 08/2016 ¦ ¦
+R ¦ 0 ¦ 06/1974 ¦ ¦
+G ¦ 1.95 ¦ Protection of Nuclear Power Plant Control Room Operators Against an Accidental Chlorine Release(Withdrawn -- See 67 FR 939 01/08/2002) ¦ 01/2002 – Guidance from RG 1.95 has been updated and incorporated into Revision 1 of RG 1.78
+R ¦ W ¦ 01/2002 ¦ ¦
+R ¦ 1 ¦ 01/1977 ¦ ¦
+P ¦ https://www.nrc.gov/regulations-legislation/regulatory-guides-by-division/division-1---power-reactors/regulatory-guides-1141---1160
+G ¦ 1.148 ¦ Functional Specification for Active Valve Assemblies in Systems Important to Safety in Nuclear Power Plants(Withdrawn -- See 75 FR 2894, 01/19/2010) ¦ 02/1979 – Draft SC 704-5, Proposed Revision 0
+R ¦ W ¦ 01/2010 ¦ ¦
+R ¦ 0 ¦ 03/1981 ¦ ¦
+G ¦ 1.160 ¦ Monitoring the Effectiveness of Maintenance at Nuclear Power Plants ¦ 06/2018 – DG-1336, Proposed Revision 4 </docs/ML1812/ML18129A080.pdf> || 09/2011 – DG-1278, Proposed Revision 3 </docs/ML1116/ML111640267.pdf> || 08/1996 – DG-1051, Proposed Revision 2 </docs/ML0037/ML003739233.pdf> || 06/1994 – DG-1031, Proposed Revision 1 || 11/1992 – DG-1020, Proposed Revision 0
+R ¦ 4 ¦ 09/2018 ¦ ¦
+R ¦ 3 ¦ 05/2012 ¦ ¦
+R ¦ 2 ¦ 03/1997 ¦ ¦
+R ¦ 1 ¦ 01/1995 ¦ ¦
+R ¦ 0 ¦ 06/1993 ¦ ¦
+P ¦ https://www.nrc.gov/regulations-legislation/regulatory-guides-by-division/division-1---power-reactors/regulatory-guides-1181---1200
+G ¦ 1.182 ¦ Assessing and Managing Risk Before Maintenance Activities at Nuclear Power Plants(Withdrawn – See 77 FR 70846, 11/27/2012) ¦ 05/2012 – Guidance from RG 1.182 has been incorporated in RG 1.160 || 12/1999 – DG-1082, Proposed Revision 0
+R ¦ W ¦ 11/2012 ¦ ¦
+R ¦ 0 ¦ 05/2000 ¦ ¦
+G ¦ 1.183 ¦ Alternative Radiological Source Terms for Evaluating Design Basis Accidents at Nuclear Power Reactors ¦ 04/2022 – DG-1389, Proposed Revision 1 </docs/ML2120/ML21204A065.pdf> || 10/2009 – DG-1199, Proposed Revision 1 </docs/ML0909/ML090960464.pdf> || 12/1999 – DG-1081, Proposed Revision 0 </docs/ML9934/ML993490086.pdf>
+R ¦ DG ¦ 07/2026 ¦ DG-1425 ¦ /docs/ML2418/ML24185A179.pdf
+R ¦ 1 ¦ 10/2023 ¦ ¦
+R ¦ 0 ¦ 07/2000 ¦ Reviewed in 2018 – Revise ¦ /docs/ML1815/ML18159A069.pdf
+G ¦ 1.186 ¦ Guidance and Examples for Identifying 10 CFR 50.2 Design Bases ¦ 05/2026 – Periodic Review – Reviewed with no issues identified </docs/ML2613/ML26138A100.pdf> || 05/2017 – Periodic Review – Reviewed with no issues identified </docs/ML1710/ML17103A206.pdf> || 06/2011 – Periodic Review – Reviewed with no issues identified || 12/2000 – RG 1.186 Revision 1 </docs/ML0037/ML003754825.pdf> || 04/2000 – DG-1093, Proposed Revision 0 </docs/ML0036/ML003691412.pdf>
+R ¦ 0 ¦ 12/2000 ¦ Periodic Review in 2026 – Reviewed with no issues identified Periodic Review in 2017 – Reviewed with no issues identified ¦ /docs/ML2613/ML26138A100.pdf /docs/ML1710/ML17103A206.pdf
+G ¦ 1.187 ¦ Guidance for Implementation of 10 CFR 50.59, Changes, Tests, and Experiments ¦ 05/2019 – DG-1356, Proposed Revision 2 </docs/ML1904/ML19045A435.pdf> || 12/2016 – DG-1334, Proposed Revision 1 </docs/ML1608/ML16089A381.pdf> || 04/2000 – DG-1095, Proposed Revision 0 </docs/ML0036/ML003698165.pdf>
+R ¦ DG ¦ 07/2026 ¦ DG-1466 ¦ /docs/ML2527/ML25272A138.pdf
+R ¦ 3 ¦ 06/2021 ¦ ¦
+R ¦ 2 ¦ 06/2020 ¦ ¦
+R ¦ 1 ¦ 05/2019 ¦ ¦
+R ¦ 0 ¦ 11/2000 ¦ Periodic ReviewApril 2011No Action ¦
+G ¦ 1.192 ¦ Operation and Maintenance Code Case Acceptability, ASME OM Code ¦ 01/2023 – DG-1407, Proposed Revision 5 </docs/ML2219/ML22196A063.pdf> || 01/2021 – DG-1368, Proposed Revision 4 </docs/ML2012/ML20120A629.pdf> || 08/2018 – DG-1343, Proposed Revision 3 </docs/ML1811/ML18114A226.pdf> || 03/2016 – DG-1297, Proposed Revision 2 </docs/ML1502/ML15027A330.pdf> || 06/2013 – DG-1232, Proposed Revision 1 </docs/ML1026/ML102600001.pdf> || 12/2001 – DG-1089, Proposed Revision 0 </docs/ML0131/ML013120051.pdf>
+R ¦ DG ¦ 02/2026 ¦ Issued DG-1448: Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2026/02/27/2026-03993/approval-of-the-2023-edition-of-the-american-society-of-mechanical-engineers-boiler-and-pressure#h-125
+R ¦ 5 ¦ 03/2024 ¦ 07/2024: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2024/07/17/2024-15288/american-society-of-mechanical-engineers-code-cases-and-update-frequency
+R ¦ 4 ¦ 12/2021 ¦ 03/2022: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2022/03/03/2022-04374/approval-of-american-society-of-mechanical-engineers-code-cases
+R ¦ 3 ¦ 10/2019 ¦ 03/2020: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2020/03/16/2020-05086/approval-of-american-society-of-mechanical-engineers-code-cases
+R ¦ 2 ¦ 03/2017 ¦ 01/2018: Final Rule Federal Register Notice(link is external) ¦ https://www.federalregister.gov/documents/2018/01/17/2018-00112/approval-of-american-society-of-mechanical-engineers-code-cases
+R ¦ 1 ¦ 10/2014 ¦ ¦
+R ¦ 0 ¦ 06/2003 ¦ ¦
+G ¦ 1.195 ¦ Methods and Assumptions for Evaluating Radiological Consequences of Design Basis Accidents at Light-Water Nuclear Power Reactors ¦ 06/2026 – Periodic Review – Reviewed with issues identified for future consideration </docs/ML2614/ML26147A157.pdf> || 07/2016 – Periodic Review – Reviewed with no issues identified </docs/ML1624/ML16244A739.pdf> || 08/2011 – Periodic Review – Reviewed with no issues identified || 05/2003 – RG 1.195 Revision 0 </docs/ML0314/ML031490640.pdf> || 01/2002 – DG-1113, Proposed Revision 0 </docs/ML0201/ML020160023.pdf>
+R ¦ 0 ¦ 05/2003 ¦ Periodic Review in 2026 – Reviewed with issues identified for future consideration Periodic Review in 2016 – Reviewed with no issues identified ¦ /docs/ML2614/ML26147A157.pdf /docs/ML1624/ML16244A739.pdf
+P ¦ https://www.nrc.gov/regulations-legislation/regulatory-guides-by-division/division-1---power-reactors/regulatory-guides-161---180
+G ¦ 1.78 ¦ Evaluating the Habitability of a Nuclear Power Plant Control Room During a Postulated Hazardous Chemical Release ¦ 07/20/21 – DG-1387, Proposed Revision 2 </docs/ML2111/ML21119A157.pdf> || 07/2020 – Periodic Review of Revision 1 – Revise </docs/ML2015/ML20154K584.pdf> || 03/2017 – Periodic Review of Revision 1 – Revise </docs/ML1709/ML17096A731.pdf> || 01/2012 – Periodic Review of Revision 1 – No issues identified || 02/2001 – DG-1087, Proposed Revision 1 </docs/ML0104/ML010440064.pdf> || Revision 1 incorporates guidance from withdrawn Regulatory Guide 1.95
+R ¦ 2 ¦ 12/2021 ¦ ¦
+R ¦ 1 ¦ 12/2001 ¦ ¦
+R ¦ 0 ¦ 06/1974 ¦ ¦

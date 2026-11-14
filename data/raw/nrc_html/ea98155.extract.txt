@@ -1,0 +1,84 @@
+# DOM text extraction (NOT original bytes) of the <article> element of
+# https://www.nrc.gov/reading-rm/doc-collections/enforcement/actions/reactors/ea98155.html
+# (redirects to https://www.nrc.gov/documents-reports/document-collections/enforcement-documents/significant-enforcement-actions/reactor-licensees/ea98155)
+# Captured 2026-11-14 via Chrome text extraction and transcribed; www.nrc.gov returns HTTP 403 to non-browser clients, so the original HTML bytes could not be saved.
+# Typos such as "1160F", "116'F" and "a charge to the facility's" are as rendered on the NRC page. Re-fetch the original when access allows.
+May 13, 1998
+
+EA 98-155
+
+Dr. Ronald Fleming, Director
+Phoenix Memorial Laboratory
+Ford Nuclear Reactor
+University of Michigan
+2301 Bonisteel Boulevard
+Ann Arbor, Michigan 48109-2100
+
+SUBJECT: NOTICE OF VIOLATION (NRC INSPECTION REPORT NO. 50-002/98202)
+
+Dear Dr. Fleming:
+
+This refers to the routine, announced inspection conducted February 23-27, 1998, to determine whether activities authorized by your license were being conducted safely and in accordance with NRC requirements. The results of the inspection were discussed with you and your staff and were detailed in the inspection report issued on March 24, 1998. An open predecisional enforcement conference was conducted in the Rockville, Maryland office on April 22, 1998, with you and other University of Michigan personnel to discuss two apparent violations, their root causes, and your corrective actions to preclude recurrence. A copy of the University of Michigan's presentation materials and a list of conference attendees are enclosed.
+
+Based on the information developed during the inspection and the information that was provided during the conference, the NRC has determined that two violations of requirements occurred. The violations are cited in the enclosed Notice of Violation (Notice) and the circumstances surrounding them are described in detail in the subject inspection report. The first violation involved the failure to adequately perform a required 10 CFR 50.59 evaluation of modification Request No. 120 which installed a new primary cooling pump and motor and removed the pump discharge check valve internals in April 1996. Consequently, the modification resulted in a significant increase in reactor cooling flow which altered the associated reactor temperature differential and ultimately precluded the required limiting safety system setting, if it had been called upon, from automatically preventing the reactor inlet temperature from exceeding the safety limit.
+
+The actual safety consequence of the first violation was low because of the relatively conservative assumptions used to establish the safety limit, the stable nature of the reactor inlet (bulk pool) temperature, and the operating procedure limits. Although the violation did not result in any safety consequence and was not programmatic in nature, it is of significant regulatory concern because the NRC must be able to rely on its licensees' ability to conduct adequate safety evaluations prior to making modifications to the reactor that effect the technical specifications. In addition, given a different set of circumstances, the failure to perform an adequate 10 CFR 50.59 safety evaluation could have resulted in a safety consequence.
+
+Therefore, this violation has been categorized in accordance with the "General Statement of Policy and Procedures for NRC Enforcement Actions" ',Enforcement Policy), NUREG-1600, as a Severity Level III Violation.
+
+In accordance with the Enforcement Policy, a base civil penalty in the amount of $2,750 is considered for a Severity Level III violation. Because your facility has not been the subject of escalated enforcement actions within the last two years, licensee Identification was not a consideration factor. The NRC considered, however, whether credit was warranted for Corrective Action in accordance with the civil penalty assessment process described in Section VI.B.2 of the Enforcement Policy. NRC determined that credit was warranted for Corrective Action because your staff, upon identification of the first violation, took prompt steps to implement temporary measures to ensure the reactor inlet safety limit was protected by reducing the limiting safety system setpoint; prepared, properly reviewed, and installed a permanent additional protection to supplement the required features; and following NRC identification of the violation, submitted proposed technical specification Amendment 44 to make the limiting safety system setting based on the reactor core inlet temperature consistent with the safety limit Based on the above, the NRC determined that credit was warranted for the factor of Corrective Action.
+
+Therefore, to encourage prompt identification and comprehensive correction of violations, I have been authorized, after consultation with the Director of Enforcement, not to propose a civil penalty in this case. However, significant violations in the future could result in a civil penalty.
+
+The second violation involves failure to notify the NRC in writing within 30 days as required by Technical Specification 6.6.2.b.2 following the discovery of the condition described previously on October 8, 1996. This violation has been characterized in accordance with the Enforcement Policy as a Severity Level IV violation.
+
+You are required to respond to this letter and should follow the instructions specified in the enclosed Notice when preparing your response. The NRC will use your response, in part, to determine whether further enforcement action is necessary to ensure compliance with regulatory requirements.
+
+In accordance with 10 CFR 2.790 of the NRC's "Rules of Practice," a copy of this letter, its enclosures, and your response will be placed in the NRC Public Document Room (PDR).
+
+Sincerely,
+
+Jack W. Roe, Acting Director
+Division of Reactor Program Management
+Office of Nuclear Reactor Regulation
+
+Docket No. 50-002
+License No. R-28
+
+Enclosures:
+Notice of Violations
+
+NOTICE OF VIOLATION
+University of Michigan Docket No. 50-002
+License No. R-28
+EA 98-155
+
+During an NRC inspection conducted on February 23-27, 1998, violations of NRC requirements were identified. In accordance with the "General Statement of Policy and Procedure for NRC Enforcement Actions," NUREG-1600, the violations are listed below.
+
+1. 10 CFR 50.59 requires, in part, that licensees may make changes in the facility as described in the safety analysis report, without prior Commission approval provided the change does not involve a change in the technical specifications.
+
+Ford Nuclear Reactor Technical Specification 2.1.1 "Safety Limits in the Forced Convection Mode," states, in part, that the objective of safety limits are to assure the integrity of the fuel clad. Paragraph 2 of Section 2. 1 - 1, states that the true value of reactor coolant inlet temperature at 2 Megawatts shall not exceed 1160F.
+
+Ford Nuclear Reactor Technical Specification 2.2.1, "Limiting Safety System Settings," states, in part, that the objective of limiting safety system settings is to assure that automatic protective action is initiated to prevent a safety limit from being exceeded.
+
+The Ford Nuclear Reactor Safety Analysis Report Section 4.1 states, in part, that the flow rate in the primary coolant system is between 900 and 1000 gallons per minute (gpm).
+
+Contrary to the above, the licensee, in April 1996, made a change to the facility by replacing a primary coolant pump and removing the pump's discharge check valve internals, which increased the primary cooling system flow to approximately 1100 gpm. Increasing the primary coolant flow resulted in the reactor limiting safety system setting for core outlet temperature no longer being able to assure that the safety limit of inlet temperature remained below 116'F at 2 Megawatts. A safety evaluation, in accordance with 10 CFR 50.59, was prepared for the pump replacement; however, the evaluation was inadequate because it did not consider the effect of increased flow on the inlet temperature safety limits, and did not identify that a charge to the facility's technical specification was required. Although the inlet temperatures never exceeded the safety limit, the reactor continued to be operated in that condition except for periodic maintenance and refueling shutdowns from completion of the modification in April 1996, until corrective action occurred on October 8, 1996. (01013)
+
+This is a Severity Level III Violation (Supplement 1)
+
+2. Technical Specification 6.6.2.b.2 requires that the licensee prepare a written report to NRC and forward it within 30 days when they discover any substantial variance from performance specifications contained in the Technical Specifications and the Safety Analysis Report.
+
+Contrary to the above, the licensee failed to notify the NRC within 30 days when they discovered on October 8, 1996, that the reactor outlet temperature limiting safety system setting would not prevent the reactor inlet temperature from being exceeded as required during 2 Megawatt operation. (02014)
+
+This is a Severity Level IV Violation (Supplement 1)
+
+Pursuant to the provisions of 10 CFR 2.201, the University of Michigan is hereby required to submit a written statement or explanation to the U.S. Nuclear Regulatory Commission, ATTN: Document Control Desk, Washington, D.C. 20555 with a copy to the Region-based inspector within 30 days of the date of the letter transmitting this Notice of Violation (Notice). This reply should be clearly marked as a "Reply to a Notice of Violation" and should include for each violation: (1) the reason for the violation, or, if contested, the basis for disputing the violation, (2) the corrective steps that have been taken and the results achieved, (3) the corrective steps that will be taken to avoid further violations, and (4) the date when full compliance will be achieved. Your response may reference or include previous docketed correspondence, if the correspondence adequately addresses the required response. If an adequate reply is not received within the time specified in this Notice, an order or a Demand for Information may be issued as to why the license should not be modified, suspended, or revoked, or why such other action as may be proper should not be taken. Where good cause is shown, consideration will be given to extending the response time.
+
+If you contest this enforcement action, you should also provide a copy of your response to the Director, Office of Enforcement, United States Nuclear Regulatory Commission, Washington, DC 20555-0001.
+
+Under the authority of Section 182 of the Act, 42 U.S.C. 2232, this response shall be submitted under oath or affirmation.
+
+Because your response will be placed in the NRC Public Document Room (PDR), to the extent possible, it should not include any personal privacy, proprietary, or safeguards information so that it can be placed in the PDR without redaction. If personal privacy or proprietary information is necessary to provide an acceptable response, then please provide a bracketed copy of your response that identifies the information that should be protected and a redacted copy of your response that deletes such information. If you request withholding of such material, you must specifically identify the portions of your response that you seek to have withheld and provide in detail the bases for your claim of withholding (e.g., explain why the disclosure of information will create an unwarranted invasion of personal privacy or provide the information required by 10 CFR 2.790(b) to support a request for withholding confidential commercial or financial information). If safeguards information is necessary to provide an acceptable response, please provide the level of protection described in 10 CFR 3.2 1.
+
+Dated this 13th day of May 1998

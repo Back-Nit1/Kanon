@@ -1,0 +1,91 @@
+# DOM text extraction (NOT original bytes) of https://www.nrc.gov/regulations-legislation/regulatory-guides-by-division/division-1---power-reactors/regulatory-guides-11---120
+# Captured 2026-11-14 via Chrome (www.nrc.gov blocks non-browser HTTP clients with 403). Whitespace collapsed; HISTORY <li> items joined by " || " with link hrefs appended in <>.
+# G ¦ rg ¦ title-cell text ¦ history ; R ¦ revision ¦ issue date ¦ additional-info text ¦ hrefs
+G ¦ 1.1 ¦ Net Positive Suction Head for Emergency Core Cooling and Containment Heat Removal System Pumps (Safety Guide 1)(Withdrawn -- See 80 FR 24293, 04/30/2015) ¦
+R ¦ W ¦ 04/2015 ¦ ¦
+R ¦ 0 ¦ 11/1970 ¦ ¦
+G ¦ 1.2 ¦ Thermal Shock to Reactor Pressure Vessels (Safety Guide 2)(Withdrawn -- See 56 FR 36175, 07/31/1991) ¦
+R ¦ W ¦ 07/1991 ¦ ¦
+R ¦ 0 ¦ 11/1970 ¦ ¦
+G ¦ 1.3 ¦ Assumptions Used for Evaluating the Potential Radiological Consequences of a Loss of Coolant Accident for Boiling Water Reactors(Withdrawn – See 81 FR 88710, 12/08/2016) ¦ 03/2016 – Periodic Review of Revision 2 – Withdraw </docs/ML1603/ML16033A441.pdf> || 10/2010 – Periodic Review of Revision 2 - No Issues Identified || Guidance from RG 1.3 has been updated and incorporated into RG 1.183, "Alternative Radiological Source Terms for Evaluating Design Basis Accidents at Nuclear Power Reactors," and RG 1.195, "Methods and Assumptions for Evaluating Radiological Consequences of Design Basis Accidents at Light-Water Nuclear Power Reactors"5
+R ¦ W ¦ 12/2016 ¦ ¦
+R ¦ 2 ¦ 06/1974 ¦ ¦
+R ¦ 1 ¦ 06/1973 ¦ ¦
+R ¦ 0 ¦ 11/1970 ¦ ¦
+G ¦ 1.4 ¦ Assumptions Used for Evaluating the Potential Radiological Consequences of a Loss of Coolant Accident for Pressurized Water Reactors(Withdrawn – See 81 FR 88710, 12/08/2016) ¦ 03/2016 – Periodic Review of Revision 2 – Withdraw </docs/ML1603/ML16033A444.pdf> || 10/2010 – Periodic Review of Revision – No Issues Identified || Guidance from RG 1.4 has been updated and incorporated into RG 1.183, "Alternative Radiological Source Terms for Evaluating Design Basis Accidents at Nuclear Power Reactors," and RG 1.195, "Methods and Assumptions for Evaluating Radiological Consequences of Design Basis Accidents at Light-Water Nuclear Power Reactors"
+R ¦ W ¦ 12/2016 ¦ ¦
+R ¦ 2 ¦ 06/1974 ¦ ¦
+R ¦ 1 ¦ 06/1973 ¦ ¦
+R ¦ 0 ¦ 11/1970 ¦ ¦
+G ¦ 1.5 ¦ Assumptions Used for Evaluating the Potential Radiological Consequences of a Steam Line Break Accident for Boiling Water Reactors (Safety Guide 5)(Withdrawn – See 81 FR 88710, 12/08/2016) ¦ 03/2016 – Periodic Review of Revision 0 – Withdraw </docs/ML1603/ML16033A454.pdf> || 10/2010 – Periodic Review of Revision 0 – No Issues Identified || Guidance from RG 1.5 has been updated and incorporated into RG 1.183, "Alternative Radiological Source Terms for Evaluating Design Basis Accidents at Nuclear Power Reactors," and RG 1.195, "Methods and Assumptions for Evaluating Radiological Consequences of Design Basis Accidents at Light-Water Nuclear Power Reactors"
+R ¦ W ¦ 12/2016 ¦ ¦
+R ¦ 0 ¦ 03/1971 ¦ ¦
+G ¦ 1.6 ¦ Independence Between Redundant Standby (Onsite) Power Sources and Between Their Distribution Systems (Safety Guide 6) ¦ 02/2014 – Periodic Review - Reviewed with no issues identified </docs/ML1403/ML14035A447.html> || 03/1971 - RG 1.6 Revision 0 </docs/ML0037/ML003739924.pdf>
+R ¦ 0 ¦ 03/1971 ¦ Periodic Review in 2014 – Reviewed with no issues identified ¦ /docs/ML1403/ML14035A447.html
+G ¦ 1.7 ¦ Control of Combustible Gas Concentrations in Containment ¦ 08/2002 – DG-1117, Proposed Revision 3 </docs/ML0222/ML022210067.pdf> || Prior to the issuance of DG-1117, RG 1.7 was entitled "Control of Combustible Gas Concentrations in Containment Following a Loss-of-Coolant Accident," to reflect its narrower original scope
+R ¦ 3 ¦ 03/2007 ¦ Periodic Review in 2023 – Revise Periodic Review in 2013 – Reviewed with issues identified for future consideration ¦ /docs/ML2311/ML23117A327.pdf /docs/ML1801/ML18018B335.html
+R ¦ 2 ¦ 11/1978 ¦ ¦
+R ¦ 1 ¦ 09/1976 ¦ ¦
+R ¦ 0 ¦ 03/1971 ¦ ¦
+G ¦ 1.8 ¦ Qualification and Training of Personnel for Nuclear Power Plants ¦ 02/2018 – DG-1329, Proposed Revision 4 </docs/ML1609/ML16091A267.pdf> || 09/2014 – Periodic Review of Revision 3 – Revise </docs/ML1427/ML14272A333.pdf> || 03/1999 – DG-1084, Second Proposed Revision 3 || 09/1996 – DG-1012, First Proposed Revision 3 || 01/1985 – Draft OL 403-5, Third Proposed Revision 2 || 09/1980 – Draft RS 807-5, Second Proposed Revision 2 || 02/1979 – Draft RS 807-5, First Proposed Revision 2
+R ¦ 4 ¦ 06/2019 ¦ ¦
+R ¦ 3 ¦ 05/2000 ¦ ¦
+R ¦ 2 ¦ 04/1987 ¦ ¦
+R ¦ 1-R ¦ 05/1977 ¦ ¦
+R ¦ 1 ¦ 09/1975 ¦ ¦
+R ¦ 0 ¦ 03/1971 ¦ ¦
+G ¦ 1.9 ¦ Application and Testing of Safety-Related Diesel Generators in Nuclear Power Plants ¦ 11/2006 – DG-1172, Proposed Revision 4 </docs/ML0626/ML062650307.pdf> || Prior to the issuance of DG-1172, RG 1.9 was entitled "Selection, Design, Qualification, and Testing of Emergency Diesel Generator Units Used as Class 1E Onsite Electric Power Systems at Nuclear Power Plants" || 04/1992 – DG-1021, Second Proposed Revision 3 || 11/1988 – Draft RS 802-5, First Proposed Revision 3
+R ¦ DG ¦ 05/2026 ¦ DG-1477, Proposed Revision 5 ¦ /docs/ML2600/ML26007A205.pdf
+R ¦ DG ¦ 01/2021 ¦ DG-1303, Proposed Revision 5 ¦ /docs/ML1428/ML14281A071.pdf
+R ¦ 4 ¦ 03/2007 ¦ Periodic Review in 2024 – RevisePeriodic Review in 2014 – Reviewed with no issues identified ¦ /docs/ML2404/ML24040A098.pdf /docs/ML1403/ML14037A122.pdf
+R ¦ 3 ¦ 07/1993 ¦ ¦
+R ¦ 2 ¦ 12/1979 ¦ ¦
+R ¦ 1 ¦ 11/1978 ¦ ¦
+R ¦ 0 ¦ 08/1971 ¦ ¦
+G ¦ 1.10 ¦ Mechanical (Cadweld) Splices in Reinforcing Bars of Category I Concrete Structures(Withdrawn -- See 46 FR 37579, 07/21/1981) ¦
+R ¦ W ¦ 07/1981 ¦ ¦
+R ¦ 1 ¦ 01/1973 ¦ ¦
+G ¦ 1.11 ¦ Instrument Lines Penetrating Primary Reactor Containment ¦ 09/2009 – DG-1225, Proposed Revision 1 </docs/ML0909/ML090970530.pdf> || Prior to the issuance of Revision 1, RG 1.11 was entitled "Instrument Lines Penetrating Primary Reactor Containment (Safety Guide 11) Supplement to Safety Guide 11, Backfitting Considerations"
+R ¦ 1 ¦ 03/2010 ¦ Periodic Review in 2025 - Reviewed with issues identified for future considerationPeriodic Review in 2015 – Reviewed with no issues identified ¦ /docs/ML2514/ML25149A252.pdf /docs/ML1511/ML15117A141.pdf
+R ¦ Supp ¦ 02/1972 ¦ ¦
+R ¦ 0 ¦ 03/1971 ¦ ¦
+G ¦ 1.12 ¦ Nuclear Power Plant Instrumentation for Earthquakes ¦ 09/2016 – DG-1332, Proposed Revision 3 </docs/ML1610/ML16104A220.pdf> || 04/2015 – Periodic Review on Revision 2 – Revise </docs/ML1502/ML15023A347.html> || 02/1995 – DG-1033, Third Proposed Revision 2 || 11/1992 – DG-1016, Second Proposed Revision 2 || 07/1981 – Draft MS 140-5, First Proposed Revision 2 </docs/ML1229/ML12298A117.pdf>
+R ¦ 3 ¦ 11/2017 ¦ ¦
+R ¦ 2 ¦ 03/1997 ¦ ¦
+R ¦ 1 ¦ 04/1974 ¦ ¦
+R ¦ 0 ¦ 03/1971 ¦ ¦
+G ¦ 1.13 ¦ Spent Fuel Storage Facility Design Basis ¦ 03/2026 – Periodic Review of Revision 2 – Reviewed with issues identified for future consideration </docs/ML2605/ML26050A188.pdf> || 10/2015 – Periodic Review of Revision 2 – No Issues Identified || 10/2006 – DG-1162, Second Proposed Revision 2 </docs/ML0626/ML062680291.pdf> || 12/1981 – Draft CE 913-5, First Proposed Revision 2 </docs/ML1229/ML12298A116.pdf> || Revision 1 was issued for public comment on 12/1975
+R ¦ 2 ¦ 03/2007 ¦ Periodic Review in 2026 - Reviewed with issues identified for future consideration ¦ /docs/ML2605/ML26050A188.pdf
+R ¦ 1 ¦ 12/1975 ¦ ¦
+R ¦ 0 ¦ 03/1971 ¦ ¦
+G ¦ 1.14 ¦ Reactor Coolant Pump Flywheel Integrity ¦ 2023 - Periodic Review - Reviewed with issues identified for future consideration </docs/ML2318/ML23188A022.pdf> || 2013 - Periodic Review - Reviewed with issues identified for future consideration </docs/ML1708/ML17082A551.html> || 01/2006 – Periodic Review of Revision 1 – No Issues Identified
+R ¦ 1 ¦ 08/1975 ¦ Periodic Review in 2023 - Reviewed with issues identified for future consideration Periodic Review in 2013 – Reviewed with issues identified for future consideration ¦ /docs/ML2318/ML23188A022.pdf /docs/ML1708/ML17082A551.html
+R ¦ 0 ¦ 10/1971 ¦ ¦
+G ¦ 1.15 ¦ Testing of Reinforcing Bars for Category I Concrete Structures(Withdrawn -- See 46 FR 37579, 07/21/1981) ¦
+R ¦ W ¦ 07/1981 ¦ ¦
+R ¦ 1 ¦ 12/1972 ¦ ¦
+G ¦ 1.16 ¦ Reporting of Operating Information -- Appendix A Technical Specifications (for Comment)(Withdrawn -- See 74 FR 40244, 08/11/2009) ¦
+R ¦ W ¦ 08/2009 ¦ ¦
+R ¦ 4 ¦ 08/1975 ¦ ¦
+R ¦ 3 ¦ 01/1975 ¦ ¦
+R ¦ 2 ¦ 09/1974 ¦ ¦
+R ¦ 1 ¦ 10/1973 ¦ ¦
+R ¦ 0 ¦ 10/1971 ¦ ¦
+G ¦ 1.17 ¦ Protection of Nuclear Power Plants Against Industrial Sabotage(Withdrawn -- See 56 FR 30777, 07/05/1991) ¦
+R ¦ W ¦ 07/1991 ¦ ¦
+R ¦ 1 ¦ 06/1973 ¦ ¦
+R ¦ 0 ¦ 10/1971 ¦ ¦
+G ¦ 1.18 ¦ Structural Acceptance Test for Concrete Primary Reactor(Withdrawn -- See 46 FR 37579, 07/21/1981) ¦
+R ¦ W ¦ 07/1981 ¦ ¦
+R ¦ 1 ¦ 12/1972 ¦ ¦
+R ¦ 0 ¦ 10/1971 ¦ ¦
+G ¦ 1.19 ¦ Nondestructive Examination of Primary Containment Liner Welds(Withdrawn -- See 46 FR 37579, 07/21/1981) ¦
+R ¦ W ¦ 07/1981 ¦ ¦
+R ¦ 1 ¦ 08/1972 ¦ ¦
+R ¦ 0 ¦ 12/1971 ¦ ¦
+G ¦ 1.20 ¦ Comprehensive Vibration Assessment Program for Reactor Internals During Preoperational and Initial Startup Testing ¦ 07/2015 – DG-1323, Proposed Revision 4 </docs/ML1508/ML15083A390.pdf> || 03/2013 – Periodic Review of Revision 3 – No Issues Identified || 11/2006 – DG-1163, Proposed Revision 3 </docs/ML0627/ML062750162.pdf>
+R ¦ 4 ¦ 02/2017 ¦ ¦
+R ¦ 3 ¦ 03/2007 ¦ ¦
+R ¦ 2 ¦ 05/1976 ¦ ¦
+R ¦ 1 ¦ 06/1975 ¦ ¦
+R ¦ 0 ¦ 12/1971 ¦ ¦

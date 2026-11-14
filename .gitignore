@@ -1,0 +1,9 @@
+.venv/
+.env
+.chroma/
+authority.db
+traces/
+__pycache__/
+.pytest_cache/
+*.db
+.DS_Store
