@@ -20,7 +20,6 @@ OCR is off: degraded scans are out of scope (see KANON.md). The corpus is restri
 with a text layer; a scan yields no chunks and fails Tier A loudly instead of yielding garbage.
 """
 
-import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -30,7 +29,7 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from pydantic import BaseModel
 
-from kanon.store import AuthorityStore, DocumentVersion
+from kanon.store import DocumentVersion
 
 
 class Chunk(BaseModel):
@@ -137,24 +136,6 @@ def _chunk_plain(path: Path, doc: DocumentVersion) -> list[Chunk]:
                   section=section, page=1, accession=doc.accession or "",
                   source_url=doc.source_url or "", paginated=False)
             for i, g in enumerate(groups)]
-
-
-def chunk_corpus(data_dir: Path, store: AuthorityStore) -> list[Chunk]:
-    """Chunk every manifest entry. Status comes from the authority store, not the manifest, so
-    the store stays the single source of truth for what is hot vs cold."""
-    converter, chunker = make_converter(), HybridChunker()
-    out: list[Chunk] = []
-    for line in (data_dir / "manifest.jsonl").read_text().splitlines():
-        if not line.strip():
-            continue
-        row = json.loads(line)
-        doc = store.get(row["doc_id"], row["revision"])
-        if doc is None:
-            raise LookupError(f"{row['doc_id']} Rev {row['revision']} not in authority store; load manifest first")
-        pr = tuple(row["page_range"]) if row.get("page_range") else None
-        out.extend(chunk_document(data_dir / row["local_path"], doc, row.get("paginated", True),
-                                  converter, chunker, page_range=pr))
-    return out
 
 
 def _s(value) -> str:

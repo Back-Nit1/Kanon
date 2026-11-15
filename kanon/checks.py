@@ -34,12 +34,14 @@ def check_chunks(chunks: list[Chunk]) -> None:
                 _fail(f"{c.id}: empty required field '{key}'")
 
 
-def check_index(index: CorpusIndex, chunks: list[Chunk], expected_dim: int) -> None:
+def check_index(index: CorpusIndex, chunk_ids: set[str], expected_dim: int) -> None:
+    """chunk_ids: what the pipeline believes it wrote (the Postgres chunks table, after a queued
+    ingest). The vector store must hold exactly that many."""
     hot, cold = index.hot.get(include=["metadatas", "embeddings"]), index.cold.get(include=["metadatas", "embeddings"])
 
     stored = len(hot["ids"]) + len(cold["ids"])
-    if stored != len({c.id for c in chunks}):
-        _fail(f"embedding count {stored} != chunk count {len({c.id for c in chunks})}")
+    if stored != len(chunk_ids):
+        _fail(f"embedding count {stored} != chunk count {len(chunk_ids)}")
 
     for data in (hot, cold):
         for cid, vec in zip(data["ids"], data["embeddings"]):
@@ -68,5 +70,5 @@ def check_round_trip(index: CorpusIndex, chunk: Chunk) -> None:
 
 def run_all(index: CorpusIndex, chunks: list[Chunk], expected_dim: int) -> None:
     check_chunks(chunks)
-    check_index(index, chunks, expected_dim)
+    check_index(index, {c.id for c in chunks}, expected_dim)
     check_round_trip(index, chunks[0])

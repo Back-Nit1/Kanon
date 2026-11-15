@@ -33,6 +33,8 @@ class Settings:
     db_path: Path
     chroma_dir: Path
     trace_dir: Path
+    pg_dsn: str
+    chroma_url: str | None      # set => Chroma server (needed for >1 worker process); else local dir
 
 
 def _model(var: str, default: str) -> str:
@@ -56,4 +58,6 @@ def load_settings() -> Settings:
         db_path=Path(os.environ.get("KANON_DB", ROOT / "authority.db")),
         chroma_dir=Path(os.environ.get("KANON_CHROMA_DIR", ROOT / ".chroma")),
         trace_dir=Path(os.environ.get("KANON_TRACE_DIR", ROOT / "traces")),
+        pg_dsn=os.environ.get("KANON_PG_DSN", "postgresql://kanon:kanon@localhost:5432/kanon"),
+        chroma_url=os.environ.get("KANON_CHROMA_URL") or None,
     )

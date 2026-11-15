@@ -34,6 +34,7 @@ Modes (the central comparison):
 import re
 from datetime import date
 from typing import Literal
+from urllib.parse import urlparse
 
 import chromadb
 from langchain_core.embeddings import Embeddings
@@ -54,6 +55,15 @@ RECORD_KINDS = ("operating_experience", "rulemaking", "notice")
 
 def is_record(kind: str) -> bool:
     return kind in RECORD_KINDS
+
+
+def open_chroma(s) -> chromadb.ClientAPI:
+    """Local PersistentClient is single-process (SQLite underneath). Parallel ingest workers
+    need the Chroma server: set KANON_CHROMA_URL (docker-compose.yml runs one)."""
+    if not s.chroma_url:
+        return chromadb.PersistentClient(path=str(s.chroma_dir))
+    u = urlparse(s.chroma_url)
+    return chromadb.HttpClient(host=u.hostname, port=u.port or 8000, ssl=u.scheme == "https")
 
 
 RRF_K = 60          # standard constant from Cormack et al. 2009; dampens the top ranks' dominance
@@ -98,6 +108,13 @@ class CorpusIndex:
                     col.upsert(ids=[c.id for c, _ in sel], embeddings=[v for _, v in sel],
                                documents=[c.text for c, _ in sel],
                                metadatas=[c.chroma_metadata() for c, _ in sel])
+        self._bm25.clear()
+
+    def remove_doc(self, doc_key: str) -> None:
+        """Drop one revision's chunks from both tiers: before re-ingesting a changed file (so a
+        shorter new version leaves no stale tail) and when its ingest job dies half-written."""
+        for col in (self.hot, self.cold):
+            col.delete(where={"doc_key": doc_key})
         self._bm25.clear()
         # ponytail: no re-tiering when a document's status changes after ingest; re-ingest moves
         # it. Add a retier() (copy hot->cold with stored embeddings, then remove from hot) when

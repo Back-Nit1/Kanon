@@ -1,7 +1,9 @@
 """CLI: the only UI. Takes a question, prints the answer, the gate decision, and the trace path.
 
   kanon load                         manifest + supersession labels -> authority.db
-  kanon ingest                       Docling parse -> chunks -> embed -> hot/cold + Tier A checks
+  kanon ingest                       queue manifest -> work the queue -> Tier A checks
+  kanon worker                       one more queue worker (run several in parallel)
+  kanon dlq [--requeue KEY]          dead letter report: failed documents and why
   kanon resolve RG-1.187 --as-of 2019-06-01
   kanon ask "question" [--mode graph|flag|none] [--today YYYY-MM-DD]
 """
@@ -9,8 +11,6 @@
 import argparse
 import sys
 from datetime import date
-
-import chromadb
 
 from kanon import checks
 from kanon.config import load_settings
@@ -22,6 +22,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("load")
     sub.add_parser("ingest")
+    sub.add_parser("worker")
+    d = sub.add_parser("dlq")
+    d.add_argument("--requeue", metavar="IDEM_KEY")
     r = sub.add_parser("resolve")
     r.add_argument("doc_id")
     r.add_argument("--as-of", type=date.fromisoformat, required=True)
@@ -61,17 +64,43 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  UNDATED    {k[0]} Rev {k[1]}: no effective_from recorded")
         return 0
 
-    from kanon.llm import embeddings
-    from kanon.retrieval import CorpusIndex
-    index = CorpusIndex(chromadb.PersistentClient(path=str(s.chroma_dir)), embeddings(s), store)
+    if args.cmd == "dlq":
+        from kanon import queue
+        conn = queue.connect(s.pg_dsn)
+        if args.requeue:
+            ok = queue.requeue(conn, args.requeue)
+            print("requeued; run `kanon worker`" if ok else f"no dead job with key {args.requeue}")
+            return 0 if ok else 1
+        print(queue.dead_letter_report(conn))
+        return 0
 
-    if args.cmd == "ingest":
-        from kanon.ingest import chunk_corpus
-        chunks = chunk_corpus(s.data_dir, store)
-        checks.check_chunks(chunks)          # fail before paying for embeddings
-        index.add(chunks)
-        checks.run_all(index, chunks, s.embedding_dim)
-        print(f"ingested {len(chunks)} chunks: hot={index.hot.count()} cold={index.cold.count()}; Tier A green")
+    from kanon.llm import embeddings
+    from kanon.retrieval import CorpusIndex, open_chroma
+    index = CorpusIndex(open_chroma(s), embeddings(s), store)
+
+    if args.cmd in ("ingest", "worker"):
+        from docling.chunking import HybridChunker
+        from kanon import queue
+        from kanon.ingest import Chunk, make_converter
+        conn = queue.connect(s.pg_dsn)
+        if args.cmd == "ingest":
+            print(f"queued {queue.enqueue_manifest(conn, s.data_dir)} new job(s)")
+        queue.run_worker(conn, s.data_dir, store, index, make_converter(), HybridChunker())
+        if args.cmd == "worker":
+            return 0
+        n = queue.counts(conn)
+        ids = queue.chunk_ids(conn)
+        checks.check_index(index, ids, s.embedding_dim)
+        if not ids:
+            raise checks.PipelineIntegrityError("ingest produced zero chunks")
+        for col in (index.hot, index.cold):     # round-trip one stored chunk by its own text
+            got = col.get(ids=[min(ids)], include=["documents", "metadatas"])
+            if got["ids"]:
+                checks.check_round_trip(index, Chunk.from_chroma(got["ids"][0], got["documents"][0], got["metadatas"][0]))
+        print(f"jobs {n}; {len(ids)} chunks: hot={index.hot.count()} cold={index.cold.count()}; Tier A green")
+        if n.get("dead"):
+            print(f"{n['dead']} document(s) failed {queue.MAX_ATTEMPTS}x and are NOT searchable: run `kanon dlq`")
+            return 1
         return 0
 
     if args.cmd == "ask":

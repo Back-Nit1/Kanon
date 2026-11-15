@@ -72,7 +72,7 @@ def test_hot_collection_has_zero_non_active_chunks(world):
 def test_dimension_mismatch_halts(world):
     _, index, chunks = world
     with pytest.raises(checks.PipelineIntegrityError, match="dim"):
-        checks.check_index(index, chunks, DIM + 1)
+        checks.check_index(index, {c.id for c in chunks}, DIM + 1)
 
 
 def test_modes_differ_exactly_where_authority_differs(world):

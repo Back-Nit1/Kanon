@@ -408,12 +408,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--judge", action="store_true", help="append Tier C annotations to traces")
     args = p.parse_args(argv)
 
-    import chromadb
     from kanon.config import load_settings
     from kanon.llm import chat_model, embeddings
+    from kanon.retrieval import open_chroma
     s = load_settings()
     store = AuthorityStore(s.db_path)
-    index = CorpusIndex(chromadb.PersistentClient(path=str(s.chroma_dir)), embeddings(s), store)
+    index = CorpusIndex(open_chroma(s), embeddings(s), store)
     if index.hot.count() + index.cold.count() == 0:
         print("index is empty — run `kanon load` and `kanon ingest` first", file=sys.stderr)
         return 1
