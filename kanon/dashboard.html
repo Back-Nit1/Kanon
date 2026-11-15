@@ -104,12 +104,14 @@ function render(){
     <td class=n>${r.n}</td><td class=n>${fmt(r.t)}</td><td class=n>${fmt(r.mean)}</td><td class=n>${fmt(r.p95)}</td><td class=n>${fmt(r.max)}</td>
     <td style="width:26%"><div class=bar><i style="width:${100*r.t/total}%;background:${color(LEAF[r.s][1])}"></i></div></td></tr>`).join("");
 
+  const timeouts = recs.filter(r=>r.stage==="eval.timeout").length;
+  const tmo = timeouts ? `<div style="margin-top:6px;color:var(--warn)">${timeouts} question(s) hit the per-question timeout (--question-timeout).</div>` : "";
   // verdict
   if(rows.length){
     const top = rows[0], cats = {}; rows.forEach(r=>cats[LEAF[r.s][1]]=(cats[LEAF[r.s][1]]||0)+r.t);
     const topCat = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
     $("verdict").innerHTML = `<b>${CAT[topCat[0]]}</b> take ${Math.round(100*topCat[1]/total)}% of measured time. Single biggest stage: <b>${top.s}</b> (${Math.round(100*top.t/total)}%, ${top.n} calls, mean ${fmt(top.mean)}).
-      <div class=mute style="margin-top:6px">${SUSPECT[top.s]||""}</div>`;
+      <div class=mute style="margin-top:6px">${SUSPECT[top.s]||""}</div>${tmo}`;
   } else if(DATA.traces.length){
     $("verdict").textContent = "No span timing yet. Showing per-question wall time from trace timestamps below; run kanon-eval again to get stage-level data.";
   } else $("verdict").textContent = "No data yet. Run `uv run kanon-eval` (or `kanon ask`) and this page fills in.";

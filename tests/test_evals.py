@@ -279,3 +279,11 @@ def test_report_says_so_when_no_thesis_case_exists(tmp_path):
     assert "partial supersession: **no case found**" in report
     assert "cross-family supersession: **not tested**" in report
     assert "Not run" in report   # no generation -> no lone superseded-citation number
+
+
+def test_timeout_is_reported_not_scored_as_abstention_or_failure():
+    rows = [{"decision": "timeout", "superseded": False, "cites_expected": False},
+            {"decision": "answer", "superseded": False, "cites_expected": True}]
+    s = evals.summarise_generation(rows)
+    assert s["timed_out"] == 1 and s["answered"] == 1 and s["answer_rate"] == 0.5
+    assert "1 TIMED OUT" in evals.pair(s)

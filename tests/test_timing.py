@@ -19,3 +19,19 @@ def test_loader_skips_half_written_line(tmp_path):
     log = tmp_path / "t.jsonl"
     log.write_text('{"stage": "a", "ms": 1}\n{"stage": "b", "m')
     assert [r["stage"] for r in load_timing(log)] == ["a"]
+
+
+def test_deadline_interrupts_a_blocking_call():
+    import time
+
+    import pytest
+    start = time.perf_counter()
+    with pytest.raises(timing.QuestionTimeout):
+        with timing.deadline(0.2):
+            time.sleep(5)
+    assert time.perf_counter() - start < 2
+
+
+def test_no_deadline_is_a_noop():
+    with timing.deadline(0):
+        pass

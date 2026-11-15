@@ -32,6 +32,7 @@ records the SHA-256 of the question file so a reader can tell which pinned set p
 import argparse
 import hashlib
 import json
+import os
 import sys
 from collections.abc import Callable
 from datetime import date
@@ -44,7 +45,7 @@ from pydantic import BaseModel
 from kanon.ingest import Chunk
 from kanon.retrieval import CorpusIndex, is_record
 from kanon.store import AuthorityStore
-from kanon.timing import set_context, span
+from kanon.timing import QuestionTimeout, deadline, set_context, span
 
 MODES = ("none", "flag", "graph")
 # The cases where a status flag is structurally blind and the bi-temporal graph is not. The spec
@@ -190,6 +191,10 @@ def summarise_generation(rows: list[dict]) -> dict:
     n = len(rows)
     answered = sum(r["decision"] == "answer" for r in rows)
     return {"questions": n, "answered": answered,
+            # A timeout is neither an answer nor an abstention: the system never got to decide.
+            # It counts as "not answered" in the rate but is reported separately so a slow run is
+            # never read as a cautious one.
+            "timed_out": sum(r["decision"] == "timeout" for r in rows),
             "answer_rate": answered / n if n else 0.0,
             # Over ANSWERED questions. With nothing answered it is 0.0 — meaningless on its own,
             # which is exactly why it is only ever reported next to answer_rate.
@@ -199,13 +204,15 @@ def summarise_generation(rows: list[dict]) -> dict:
 
 def pair(s: dict) -> str:
     """The one place either half of the primary metric is formatted. Never split it."""
+    late = f", {s['timed_out']} TIMED OUT" if s.get("timed_out") else ""
     return (f"superseded-citation rate {s['superseded_citation_rate']:.0%} "
-            f"@ answer rate {s['answer_rate']:.0%} ({s['answered']}/{s['questions']} answered)")
+            f"@ answer rate {s['answer_rate']:.0%} ({s['answered']}/{s['questions']} answered{late})")
 
 
 def generation_eval(llm, index: CorpusIndex, store: AuthorityStore, today: date,
                     questions: list[Question], mode: str, trace_dir: Path,
-                    judge_llm=None, judge_model: str = "") -> list[dict]:
+                    judge_llm=None, judge_model: str = "",
+                    question_timeout: float | None = None) -> list[dict]:
     from kanon.agent import build_agent
     from kanon.trace import TraceRecorder
     agent = build_agent(llm, index, store, mode)
@@ -213,9 +220,22 @@ def generation_eval(llm, index: CorpusIndex, store: AuthorityStore, today: date,
     for q in questions:
         recorder = TraceRecorder()
         set_context(phase="generation", mode=mode, qid=q.id)
-        with span("eval.generation_question"):
-            state = agent.invoke({"question": q.question, "mode": mode, "today": today},
-                                 config={"callbacks": [recorder]})
+        try:
+            with span("eval.generation_question"), deadline(question_timeout):
+                state = agent.invoke({"question": q.question, "mode": mode, "today": today},
+                                     config={"callbacks": [recorder]})
+        except QuestionTimeout:
+            # Keep the partial trace (tool calls made so far) and move on; never drop the row.
+            with span("eval.timeout"):
+                pass
+            state = {"question": q.question, "mode": mode, "decision": "timeout",
+                     "final": f"TIMED OUT after {question_timeout:g}s; no answer or gate decision."}
+            path = recorder.write(trace_dir / mode / q.id, state)
+            rows.append({"id": q.id, "category": q.category, "decision": "timeout",
+                         "expect_abstain": not q.expected, "superseded": False,
+                         "cites_expected": False, "citations": [], "model_as_of": "—",
+                         "as_of_mismatch": False, "violations": [], "trace": str(path)})
+            continue
         # One directory per question: TraceRecorder names files by the second, so two fast
         # questions in one directory would overwrite each other.
         path = recorder.write(trace_dir / mode / q.id, state)
@@ -279,8 +299,8 @@ def failure_cases(retrieval: dict, generation: dict | None, resolver: list[dict]
         g_flag = {r["id"]: r for r in generation.get("flag", {}).get("rows", [])}
         for g in generation.get("graph", {}).get("rows", []):
             f = g_flag.get(g["id"])
-            if f is None:
-                continue
+            if f is None or "timeout" in (f["decision"], g["decision"]):
+                continue   # a timeout says nothing about authority; never score it as a failure
             if g["expect_abstain"]:
                 graph_ok, flag_bad = g["decision"] == "abstain", f["decision"] == "answer"
             else:
@@ -314,6 +334,9 @@ def render_report(res: dict) -> str:
             L.append(f"| {m} | {s['superseded_citation_rate']:.0%} | {s['answer_rate']:.0%} | "
                      f"{s['answered']}/{s['questions']} | {s['cites_expected_rate']:.0%} |")
         L += ["", *[f"- `{m}`: {pair(g['summary'])}" for m, g in res["generation"].items()], ""]
+        if any(g["summary"].get("timed_out") for g in res["generation"].values()):
+            L += ["**Some questions timed out.** A timeout is not an abstention; those rows have no "
+                  "answer and no gate decision, and are excluded from named failure cases.", ""]
 
     L += ["## Retrieval (no LLM)", "",
           "| mode | recall@k | MRR | superseded-chunk rate | retrieved chunks |", "|---|---|---|---|---|"]
@@ -379,7 +402,7 @@ def render_report(res: dict) -> str:
 
 def run(index: CorpusIndex, store: AuthorityStore, questions_file: Path, k: int,
         modes: tuple[str, ...] = MODES, llm=None, trace_dir: Path | None = None,
-        judge_llm=None, judge_model: str = "") -> dict:
+        judge_llm=None, judge_model: str = "", question_timeout: float | None = None) -> dict:
     today, questions, sha, notes = load_questions(questions_file)
     problems = check_questions(store, today, questions)
     if problems:   # halt: grading against an underivable expected answer is worse than no grade
@@ -398,7 +421,7 @@ def run(index: CorpusIndex, store: AuthorityStore, questions_file: Path, k: int,
         res["generation"] = {}
         for m in modes:
             rows = generation_eval(llm, index, store, today, qa, m, trace_dir,
-                                   judge_llm, judge_model)
+                                   judge_llm, judge_model, question_timeout)
             res["generation"][m] = {"summary": summarise_generation(rows), "rows": rows}
     res["failure_cases"] = failure_cases(res["retrieval"], res["generation"], resolver)
     return res
@@ -412,6 +435,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES))
     p.add_argument("--retrieval-only", action="store_true")
     p.add_argument("--judge", action="store_true", help="append Tier C annotations to traces")
+    # Measured on this corpus: a question takes roughly 7-23 s (three sequential reasoning-model
+    # calls). 60 s leaves headroom over the slowest seen and still catches a hung request.
+    p.add_argument("--question-timeout", type=float,
+                   default=float(os.environ.get("KANON_QUESTION_TIMEOUT", 60)),
+                   help="seconds allowed per question per mode (0 = no limit); "
+                        "a timed-out question is recorded, reported, and the run moves on")
     args = p.parse_args(argv)
 
     from kanon.config import load_settings
@@ -426,7 +455,7 @@ def main(argv: list[str] | None = None) -> int:
     llm = None if args.retrieval_only else chat_model(s)
     judge_llm = chat_model(s, role="judge") if args.judge and llm else None
     res = run(index, store, args.questions, args.k, tuple(args.modes), llm,
-              s.trace_dir / "eval", judge_llm, s.judge_model)
+              s.trace_dir / "eval", judge_llm, s.judge_model, args.question_timeout)
 
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "results.json").write_text(json.dumps(res, indent=2, default=str))

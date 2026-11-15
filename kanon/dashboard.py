@@ -1,6 +1,6 @@
 """Localhost dashboard: where does an eval (or a single `kanon ask`) spend its time?
 
-    uv run kanon-dashboard            # http://127.0.0.1:8765, refreshes every 3 s while a run is going
+    uv run kanon-dashboard            # http://127.0.0.1:8791, refreshes every 3 s while a run is going
 
 Reads traces/timing.jsonl (written by kanon.timing spans) and, as a fallback for runs made before
 timing existed, the modification times of traces/eval/<mode>/<qid>/*.json. Read-only: it never
@@ -71,7 +71,7 @@ class Handler(BaseHTTPRequestHandler):
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="kanon-dashboard")
-    p.add_argument("--port", type=int, default=8765)
+    p.add_argument("--port", type=int, default=8791)
     args = p.parse_args(argv)
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     print(f"Kanon dashboard: http://127.0.0.1:{args.port}  (reading {Handler.log})")

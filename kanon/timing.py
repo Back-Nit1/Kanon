@@ -11,6 +11,8 @@ Not thread-safe by design: the eval runs questions one at a time, so one module-
 
 import json
 import os
+import signal
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -41,3 +43,34 @@ def span(stage: str, **extra):
                 f.write(json.dumps(rec) + "\n")
         except OSError:
             pass   # timing must never break a run
+
+
+class QuestionTimeout(BaseException):
+    """Raised inside a run when its deadline passes. BaseException on purpose: library code that
+    does `except Exception` (retry loops, callbacks) must not swallow the deadline."""
+
+
+@contextmanager
+def deadline(seconds: float | None):
+    """Abort the enclosed block after `seconds` of wall time (0/None = no limit).
+
+    SIGALRM interrupts a blocking network call (a hung model request) where a thread-based
+    timeout could only stop waiting and leave the call running in the background, still billing.
+    Rejected: ThreadPoolExecutor + future.result(timeout) for exactly that reason; per-request
+    client timeouts alone, because a question makes several calls and each could be just under
+    the limit. Needs the main thread (signals); elsewhere it is a no-op, never an error.
+    """
+    if not seconds or threading.current_thread() is not threading.main_thread():
+        yield
+        return
+
+    def fire(*_):
+        raise QuestionTimeout(seconds)
+
+    old = signal.signal(signal.SIGALRM, fire)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old)

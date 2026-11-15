@@ -56,7 +56,7 @@ uv run kanon dlq                   # failed files, attempts, causes, source URLs
 uv run kanon dlq --failing         # revisions ranked by accumulated failures
 uv run kanon resolve 10CFR50.59 --as-of 2000-06-01
 uv run kanon ask "An engineer wants to replace a primary coolant pump..." --mode graph
-uv run kanon-dashboard             # localhost:8765, where an eval spends its time (reads traces/timing.jsonl)
+uv run kanon-dashboard             # localhost:8791, where an eval spends its time (reads traces/timing.jsonl)
 uv run kanon-eval                  # all three modes; --retrieval-only needs no chat model
 uv run pytest -q
 ```
