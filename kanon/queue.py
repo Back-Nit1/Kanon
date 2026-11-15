@@ -11,9 +11,10 @@ Rejected: Celery/RQ + Redis — a second stateful service, and delivery is at-le
 Rejected: Kafka — a partitioned log for high-throughput streams. Regulatory ingest is thousands
   of documents, not millions of events per second.
 
-Idempotency key: `doc_id@revision:sha256(file)[:16]`.
+Idempotency key: `doc_id@revision:sha256(file)[:16]:c<CHUNKING_VERSION>`.
   - Re-enqueueing the same file is a no-op (primary-key conflict).
-  - A changed file is a new key, so a new job; it purges the revision's old chunks first.
+  - A changed file or chunker is a new key, so a new job; it purges the revision's old chunks
+    first, so a shorter new version leaves no stale tail.
   - Chunk ids are deterministic (`doc_id@rev#0007`) and every write is an upsert, so redoing a
     batch after a crash overwrites instead of duplicating, in Chroma and here.
 
@@ -37,7 +38,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
 from kanon.checks import PipelineIntegrityError, check_chunks
-from kanon.ingest import Chunk, chunk_document
+from kanon.ingest import CHUNKING_VERSION, Chunk, chunk_document
 
 MAX_ATTEMPTS = 3
 BATCH = 64                  # chunks per embed call and per progress checkpoint
@@ -125,7 +126,7 @@ def connect(dsn: str) -> psycopg.Connection:
 
 def idem_key(doc_id: str, revision: str, path: Path) -> str:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()[:16] if path.exists() else "missing"
-    return f"{doc_id}@{revision}:{digest}"
+    return f"{doc_id}@{revision}:{digest}:c{CHUNKING_VERSION}"
 
 
 def enqueue_manifest(conn: psycopg.Connection, data_dir: Path) -> int:
@@ -159,8 +160,8 @@ def process(conn: psycopg.Connection, job: dict, data_dir: Path, store, index, c
         if doc is None:
             raise LookupError(f"{doc_key} not in authority store")
         pr = tuple(job["page_range"]) if job["page_range"] else None
-        # ponytail: resume assumes chunking is deterministic for a given file hash. Holds while
-        # the Docling version is pinned by uv.lock; add the version to idem_key if that changes.
+        # ponytail: resume assumes chunking is deterministic for a given key. Holds while Docling
+        # is pinned by uv.lock; bump CHUNKING_VERSION on a Docling upgrade.
         chunks = chunk_document(path, doc, job["paginated"], converter, chunker, page_range=pr)
         stage = "validate"
         check_chunks(chunks)                       # fail before paying for embeddings

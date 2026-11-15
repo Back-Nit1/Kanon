@@ -1,7 +1,7 @@
 # Ingest infrastructure: Postgres (job queue, dead letter queue, chunk metadata) and a Chroma
 # server (the local PersistentClient is single-process; parallel workers need the server).
 #   docker compose up -d
-#   KANON_CHROMA_URL=http://localhost:8000 uv run kanon ingest
+#   KANON_CHROMA_URL=http://localhost:8001 uv run kanon ingest
 services:
   postgres:
     image: postgres:17
@@ -13,7 +13,7 @@ services:
     volumes: [pgdata:/var/lib/postgresql/data]
   chroma:
     image: chromadb/chroma:1.5.9    # match the chromadb client pinned in uv.lock
-    ports: ["127.0.0.1:8000:8000"]
+    ports: ["127.0.0.1:8001:8000"]
     volumes: [chromadata:/data]
 volumes:
   pgdata:

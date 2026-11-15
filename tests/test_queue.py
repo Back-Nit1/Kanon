@@ -74,12 +74,14 @@ def _chunks(n):
                   accession="", source_url="", paginated=True) for i in range(n)]
 
 
-def test_enqueue_is_idempotent_per_file_content(conn, tmp_path):
+def test_enqueue_is_idempotent_per_file_and_chunker(conn, tmp_path, monkeypatch):
     d = _data_dir(tmp_path, b"%PDF-1.4 v1")
     assert queue.enqueue_manifest(conn, d) == 1
     assert queue.enqueue_manifest(conn, d) == 0          # same bytes, same key: no duplicate job
     (d / "doc.pdf").write_bytes(b"%PDF-1.4 v2")
     assert queue.enqueue_manifest(conn, d) == 1          # changed file: new key, new job
+    monkeypatch.setattr(queue, "CHUNKING_VERSION", 99)
+    assert queue.enqueue_manifest(conn, d) == 1          # changed chunker: everything re-queues
 
 
 def test_concurrent_workers_never_claim_the_same_job(conn, tmp_path):

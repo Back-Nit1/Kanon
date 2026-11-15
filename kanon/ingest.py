@@ -70,6 +70,11 @@ class Chunk(BaseModel):
 
 REQUIRED_KEYS = set(Chunk.model_fields) - {"score"}
 
+# Part of every ingest job's idempotency key. Bump it whenever chunking output changes (splitting,
+# heading handling, metadata), so the next `kanon ingest` re-queues every document instead of
+# skipping them as already done.
+CHUNKING_VERSION = 2
+
 
 def make_converter() -> DocumentConverter:
     opts = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
@@ -95,12 +100,17 @@ def chunk_document(path: Path, doc: DocumentVersion, paginated: bool,
             page = 1
         else:
             raise ValueError(f"{path.name} chunk {i}: paginated source but no page provenance")
+        # Heading path goes into both the metadata and the embedded text, so BM25 and dense
+        # search see "§ 50.59 > (c)" with the body. Text above the first heading (a Federal
+        # Register preamble, an untitled page 1) falls back to the document title, never blank.
+        section = " > ".join(c.meta.headings or []) or doc.title or doc.doc_id
+        text = chunker.contextualize(c)
         chunks.append(Chunk(
             id=f"{doc.doc_id}@{doc.revision}#{i:04d}",
-            text=chunker.contextualize(c),   # prepends the heading path: helps BM25 and dense
+            text=text if c.meta.headings else f"{section}\n{text}",
             doc_id=doc.doc_id, revision=doc.revision, kind=doc.kind, status=doc.status,
             effective_from=_s(doc.effective_from), effective_to=_s(doc.effective_to) or None,
-            issue_date=_s(doc.issue_date), section=" > ".join(c.meta.headings or []),
+            issue_date=_s(doc.issue_date), section=section,
             page=page, accession=doc.accession or "", source_url=doc.source_url or "",
             paginated=paginated))
     return chunks
@@ -122,6 +132,7 @@ def _chunk_plain(path: Path, doc: DocumentVersion) -> list[Chunk]:
     else:
         section = ""
         paras = [p.strip() for p in path.read_text().split("\n\n")]
+    section = section or doc.title or doc.doc_id
     groups, cur = [], ""
     for para in filter(None, paras):
         if cur and len(cur) + len(para) > PLAIN_CHUNK_CHARS:
