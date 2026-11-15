@@ -117,7 +117,8 @@ def main(argv: list[str] | None = None) -> int:
         state = agent.invoke({"question": args.question, "mode": args.mode, "today": args.today},
                              config={"callbacks": [recorder]})
         path = recorder.write(s.trace_dir, state)
-        print(state["final"])
+        # One blank line between every line so bullets and sources are easy to scan.
+        print("\n\n".join(l for l in state["final"].splitlines() if l.strip()))
         print(f"\n[gate: {state['decision']} | mode: {args.mode} | as_of: {state.get('as_of')}]")
         unenforced = [v for v in state.get("violations", []) if state["decision"] == "answer"]
         if unenforced:

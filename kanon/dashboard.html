@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kanon Runtime</title>
+<style>
+:root{--bg:#f7f7f5;--card:#fff;--ink:#1b1b1a;--mute:#6b6b66;--line:#e3e3df;
+  --llm:#2a6fdb;--embed:#d9822b;--chroma:#1f9e89;--bm25:#8a5cc2;--store:#7a7a74;
+  --warn:#b3261e}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121211;--card:#1c1c1a;--ink:#ecece8;--mute:#9a9a94;--line:#2d2d2a;
+  --llm:#6aa2ff;--embed:#f0a35c;--chroma:#4cc5af;--bm25:#b793e8;--store:#a0a09a;--warn:#ff8a80}}
+:root[data-theme="dark"]{--bg:#121211;--card:#1c1c1a;--ink:#ecece8;--mute:#9a9a94;--line:#2d2d2a;
+  --llm:#6aa2ff;--embed:#f0a35c;--chroma:#4cc5af;--bm25:#b793e8;--store:#a0a09a;--warn:#ff8a80}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 -apple-system,system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 10px}
+.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
+.pill{font-size:12px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}
+.pill.live{color:var(--chroma);border-color:var(--chroma)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.verdict{font-size:15px}.verdict b{color:var(--warn)}
+.mute{color:var(--mute)}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-weight:600;color:var(--mute);font-size:12px;cursor:pointer;white-space:nowrap}
+td.n,th.n{text-align:right}
+.bar{height:10px;background:var(--line);border-radius:3px;overflow:hidden;display:flex;min-width:120px}
+.bar i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-bottom:8px}
+.legend span:before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;background:var(--c)}
+.scroll{overflow-x:auto}
+.suspect{padding:8px 0;border-bottom:1px solid var(--line)}.suspect:last-child{border:0}
+.suspect code{font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px}
+select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+</style>
+</head>
+<body><main>
+<div class="top">
+  <div><h1>Kanon runtime</h1><div class="mute" id="src"></div></div>
+  <div><span class="pill" id="status">loading</span> <select id="mode"><option value="">all modes</option></select></div>
+</div>
+<div class="card verdict" id="verdict">Waiting for data…</div>
+<div class="card"><h2>Where time goes</h2>
+  <div class="legend" id="legend"></div>
+  <div class="scroll"><table id="stages"></table></div></div>
+<div class="card"><h2>By mode</h2><div class="scroll"><table id="modes"></table></div></div>
+<div class="card"><h2>By question (click a header to sort)</h2><div class="scroll"><table id="questions"></table></div></div>
+<div class="card" id="fallbackCard" hidden><h2>Per-question wall time from trace file timestamps</h2>
+  <div class="mute">Runs made before timing spans existed. Gap between consecutive finished traces in one mode.</div>
+  <div class="scroll"><table id="fallback"></table></div></div>
+<div class="card"><h2>What each stage means, and what to check</h2><div id="suspects"></div></div>
+</main>
+<script>
+// Leaf stages only: wrappers (eval.*, tool.*) contain the leaves, so summing both would double count.
+const LEAF = {
+ "llm.classify":["LLM","llm"],"llm.select_tools":["LLM","llm"],"llm.draft":["LLM","llm"],"llm.judge":["LLM","llm"],
+ "embed.query":["Embedding call","embed"],
+ "chroma.get_eligible":["Chroma: fetch all eligible chunks","chroma"],"chroma.query":["Chroma: vector query","chroma"],
+ "bm25.rank":["BM25 scoring","bm25"],"bm25.build_index":["BM25 index build (once)","bm25"],
+ "store.governing_set":["Authority store scan","store"],"authority.resolve":["Authority resolve","store"]};
+const CAT = {llm:"LLM calls",embed:"Embedding API",chroma:"Chroma",bm25:"BM25",store:"Authority store"};
+const SUSPECT = {
+ "llm.classify":"One reasoning-model round trip before any retrieval. Check KANON_REASONING_EFFORT (default medium); lower it for classification-type calls.",
+ "llm.select_tools":"Second sequential round trip; the model emits several tool calls in one turn, so output tokens grow with the number of calls.",
+ "llm.draft":"Usually the biggest: the prompt carries up to k=8 chunks per search plus records, and a reasoning model spends hidden tokens before it answers. Compare prompt_chars and ms in the question table.",
+ "llm.judge":"Only with --judge: one more reasoning call per question per mode.",
+ "embed.query":"One OpenAI network call per search. A question that triggers 3-4 searches pays it 3-4 times; identical query strings are not cached.",
+ "chroma.get_eligible":"retrieval._hybrid fetches the text and metadata of EVERY eligible chunk on every search (hot has ~3000 chunks) just to build an id filter. Cost grows with corpus size, not with k.",
+ "chroma.query":"Dense search constrained to an explicit ids list; the list is sent over HTTP to the Chroma server each time.",
+ "bm25.rank":"get_scores scores every chunk, then the code sorts ALL scores in Python. O(chunks) per search.",
+ "bm25.build_index":"Tokenises the whole collection once per process (and again after any write). A one-off cost at the start of a run.",
+ "store.governing_set":"Graph mode only: one SQLite lookup pair per document per search. Small at 26 documents.",
+ "authority.resolve":"Runs resolve_authority for every distinct document among retrieved chunks. Small unless the walk re-queries edges heavily."};
+const $ = id => document.getElementById(id);
+const fmt = ms => ms>=1000 ? (ms/1000).toFixed(1)+" s" : Math.round(ms)+" ms";
+let DATA = {records:[],traces:[]}, SORT = {key:"total",dir:-1};
+
+const sum = a => a.reduce((x,y)=>x+y,0);
+const pct = (a,p)=>{const s=[...a].sort((x,y)=>x-y);return s.length?s[Math.min(s.length-1,Math.floor(p*s.length))]:0};
+const color = c => `var(--${c})`;
+
+function render(){
+  const mode = $("mode").value;
+  const recs = DATA.records.filter(r=>!mode||r.mode===mode);
+  const leaf = recs.filter(r=>LEAF[r.stage]);
+  $("src").textContent = `${DATA.log} · ${DATA.records.length} spans`;
+  const last = DATA.records.length ? DATA.records[DATA.records.length-1].ts : 0;
+  const live = Date.now()/1000 - last < 20;
+  $("status").textContent = DATA.records.length ? (live?"running":"idle") : "no timing data";
+  $("status").className = "pill"+(live?" live":"");
+
+  $("legend").innerHTML = Object.entries(CAT).map(([k,v])=>`<span style="--c:var(--${k})">${v}</span>`).join("");
+
+  // stage table
+  const by = {};
+  leaf.forEach(r=>(by[r.stage]??=[]).push(r.ms));
+  const total = sum(Object.values(by).map(sum));
+  const rows = Object.entries(by).map(([s,v])=>({s,n:v.length,t:sum(v),mean:sum(v)/v.length,p95:pct(v,.95),max:Math.max(...v)}))
+    .sort((a,b)=>b.t-a.t);
+  $("stages").innerHTML = `<tr><th>stage</th><th class=n>calls</th><th class=n>total</th><th class=n>mean</th><th class=n>p95</th><th class=n>max</th><th>share</th></tr>`+
+    rows.map(r=>`<tr><td><span style="color:${color(LEAF[r.s][1])}">■</span> ${r.s} <span class=mute>${LEAF[r.s][0]}</span></td>
+    <td class=n>${r.n}</td><td class=n>${fmt(r.t)}</td><td class=n>${fmt(r.mean)}</td><td class=n>${fmt(r.p95)}</td><td class=n>${fmt(r.max)}</td>
+    <td style="width:26%"><div class=bar><i style="width:${100*r.t/total}%;background:${color(LEAF[r.s][1])}"></i></div></td></tr>`).join("");
+
+  // verdict
+  if(rows.length){
+    const top = rows[0], cats = {}; rows.forEach(r=>cats[LEAF[r.s][1]]=(cats[LEAF[r.s][1]]||0)+r.t);
+    const topCat = Object.entries(cats).sort((a,b)=>b[1]-a[1])[0];
+    $("verdict").innerHTML = `<b>${CAT[topCat[0]]}</b> take ${Math.round(100*topCat[1]/total)}% of measured time. Single biggest stage: <b>${top.s}</b> (${Math.round(100*top.t/total)}%, ${top.n} calls, mean ${fmt(top.mean)}).
+      <div class=mute style="margin-top:6px">${SUSPECT[top.s]||""}</div>`;
+  } else if(DATA.traces.length){
+    $("verdict").textContent = "No span timing yet. Showing per-question wall time from trace timestamps below; run kanon-eval again to get stage-level data.";
+  } else $("verdict").textContent = "No data yet. Run `uv run kanon-eval` (or `kanon ask`) and this page fills in.";
+
+  // by mode
+  const modes = [...new Set(DATA.records.map(r=>r.mode).filter(Boolean))];
+  $("modes").innerHTML = `<tr><th>mode</th><th class=n>questions</th><th class=n>generation total</th><th class=n>mean / question</th><th>split</th></tr>`+
+   modes.map(m=>{
+     const q = DATA.records.filter(r=>r.mode===m&&r.stage==="eval.generation_question");
+     const l = DATA.records.filter(r=>r.mode===m&&LEAF[r.stage]);
+     const t = sum(l.map(r=>r.ms)); const cat={}; l.forEach(r=>cat[LEAF[r.stage][1]]=(cat[LEAF[r.stage][1]]||0)+r.ms);
+     return `<tr><td>${m}</td><td class=n>${q.length}</td><td class=n>${fmt(sum(q.map(r=>r.ms)))}</td>
+       <td class=n>${q.length?fmt(sum(q.map(r=>r.ms))/q.length):"–"}</td>
+       <td style="width:40%"><div class=bar>${Object.entries(cat).map(([c,v])=>`<i title="${CAT[c]} ${fmt(v)}" style="width:${100*v/t}%;background:${color(c)}"></i>`).join("")}</div></td></tr>`}).join("")
+     || `<tr><td class=mute>no per-mode data</td></tr>`;
+
+  // by question
+  const qs = {};
+  recs.forEach(r=>{ if(!r.qid) return; const k=r.mode+"|"+r.qid; const o=(qs[k]??={mode:r.mode,qid:r.qid,total:0,stages:{}});
+    if(r.stage==="eval.generation_question") o.total=r.ms;
+    else if(LEAF[r.stage]) o.stages[r.stage]=(o.stages[r.stage]||0)+r.ms; });
+  const qrows = Object.values(qs).filter(o=>o.total).map(o=>{
+    const top = Object.entries(o.stages).sort((a,b)=>b[1]-a[1])[0]; return {...o,top:top?top[0]:"",topms:top?top[1]:0}});
+  const dir = SORT.dir, key = SORT.key;
+  qrows.sort((a,b)=> (typeof a[key]==="string" ? a[key].localeCompare(b[key]) : a[key]-b[key])*dir);
+  const maxT = Math.max(1,...qrows.map(o=>o.total));
+  const hd = (k,l,c="")=>`<th class="${c}" data-k="${k}">${l}${SORT.key===k?(SORT.dir<0?" ↓":" ↑"):""}</th>`;
+  $("questions").innerHTML = `<tr>${hd("mode","mode")}${hd("qid","question")}${hd("total","total","n")}${hd("topms","slowest stage")}<th>breakdown</th></tr>`+
+    qrows.map(o=>`<tr><td>${o.mode}</td><td>${o.qid}</td><td class=n>${fmt(o.total)}</td><td>${o.top} <span class=mute>${fmt(o.topms)}</span></td>
+     <td style="width:34%"><div class=bar style="width:${100*o.total/maxT}%">${Object.entries(o.stages).map(([s,v])=>`<i title="${s} ${fmt(v)}" style="width:${100*v/o.total}%;background:${color(LEAF[s][1])}"></i>`).join("")}</div></td></tr>`).join("")
+    || `<tr><td class=mute>no per-question spans yet</td></tr>`;
+  document.querySelectorAll("#questions th[data-k]").forEach(th=>th.onclick=()=>{
+    SORT = {key:th.dataset.k, dir: SORT.key===th.dataset.k ? -SORT.dir : -1}; render();});
+
+  // fallback from trace mtimes
+  const showFb = !DATA.records.some(r=>r.stage==="eval.generation_question") && DATA.traces.length;
+  $("fallbackCard").hidden = !showFb;
+  if(showFb){
+    const tr = DATA.traces.filter(t=>!mode||t.mode===mode); const prev = {}; const rowsFb = [];
+    tr.forEach(t=>{ if(prev[t.mode]!==undefined) rowsFb.push({mode:t.mode,qid:t.qid,s:t.done-prev[t.mode]}); prev[t.mode]=t.done; });
+    const mx = Math.max(1,...rowsFb.map(r=>r.s));
+    $("fallback").innerHTML = `<tr><th>mode</th><th>question</th><th class=n>approx. time</th><th></th></tr>`+
+      rowsFb.map(r=>`<tr><td>${r.mode}</td><td>${r.qid}</td><td class=n>${r.s.toFixed(0)} s</td><td style="width:40%"><div class=bar><i style="width:${100*r.s/mx}%;background:var(--llm)"></i></div></td></tr>`).join("");
+  }
+
+  $("suspects").innerHTML = Object.keys(SUSPECT).map(s=>`<div class=suspect><code>${s}</code> <span style="color:${color(LEAF[s][1])}">■</span> ${SUSPECT[s]}</div>`).join("");
+}
+
+async function poll(){
+  try{ DATA = await (await fetch("/api/timing")).json();
+    const ms = [...new Set(DATA.records.map(r=>r.mode).filter(Boolean))];
+    const sel = $("mode"); if(sel.options.length-1!==ms.length){ const cur=sel.value;
+      sel.innerHTML = '<option value="">all modes</option>'+ms.map(m=>`<option>${m}</option>`).join(""); sel.value=cur; }
+    render();
+  }catch(e){ $("status").textContent="server unreachable"; }
+}
+$("mode").onchange = render;
+poll(); setInterval(poll, 3000);
+</script>
+</body></html>

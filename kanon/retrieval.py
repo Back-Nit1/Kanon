@@ -43,6 +43,7 @@ from rank_bm25 import BM25Okapi
 
 from kanon.ingest import Chunk
 from kanon.store import AuthorityStore
+from kanon.timing import span
 
 Mode = Literal["none", "flag", "graph"]
 # Requirements state what governs (CFR sections, guides, tech specs, amendments). Records state
@@ -178,7 +179,8 @@ class CorpusIndex:
             return self._hybrid(query, k, [self.hot, self.cold], allowed=None, precedent=False, filters=(plant, unit, docket))
         if as_of is None:
             raise ValueError("mode 'graph' requires as_of")   # the date is the whole point
-        allowed = {f"{d}@{r}" for d, r in self.store.governing_set(as_of)}
+        with span("store.governing_set"):
+            allowed = {f"{d}@{r}" for d, r in self.store.governing_set(as_of)}
         return self._hybrid(query, k, [self.hot, self.cold], allowed=allowed, precedent=False, filters=(plant, unit, docket))
 
     def search_precedent(self, query: str, k: int, since: date | None = None,
@@ -198,25 +200,29 @@ class CorpusIndex:
         if allowed is not None and not allowed:
             return []
         where = _where(allowed, precedent)
-        qvec = self.embedder.embed_query(query)
+        with span("embed.query"):   # one OpenAI network round trip per search
+            qvec = self.embedder.embed_query(query)
         rankings, found = [], {}
         for col in cols:
             if col.count() == 0:
                 continue
             # Filter the candidate universe before either ranking, so unrelated chunks cannot
             # consume the fixed candidate budget. JSON strings work on old and new Chroma.
-            data = col.get(where=where, include=["documents", "metadatas"])
+            with span("chroma.get_eligible", col=col.name):   # pulls every eligible chunk's text
+                data = col.get(where=where, include=["documents", "metadatas"])
             eligible = {i for i, m in zip(data["ids"], data["metadatas"])
                         if _matches(m, filters) and (since is None or
                            (m.get("issue_date") or m.get("effective_from") or "") >= since.isoformat())}
             if not eligible:
                 continue
-            dense = col.query(query_embeddings=[qvec], n_results=min(CANDIDATES, col.count()),
-                              ids=sorted(eligible), where=where, include=["documents", "metadatas"])
+            with span("chroma.query", col=col.name, eligible=len(eligible)):
+                dense = col.query(query_embeddings=[qvec], n_results=min(CANDIDATES, col.count()),
+                                  ids=sorted(eligible), where=where, include=["documents", "metadatas"])
             ids = dense["ids"][0]
             rankings.append(ids)
             found.update({i: (t, m) for i, t, m in zip(ids, dense["documents"][0], dense["metadatas"][0])})
-            rankings.append(self._bm25_rank(col, query, allowed, precedent, found, eligible))
+            with span("bm25.rank", col=col.name):
+                rankings.append(self._bm25_rank(col, query, allowed, precedent, found, eligible))
         fused = sorted(rrf(rankings).items(), key=lambda kv: kv[1], reverse=True)[:k]
         return [Chunk.from_chroma(i, *found[i], score=s) for i, s in fused]
 
@@ -225,8 +231,9 @@ class CorpusIndex:
         # ponytail: BM25 index rebuilt in memory from Chroma per process. Fine for thousands of
         # chunks; persist it (or use a search engine) at ~10^6.
         if col.name not in self._bm25:
-            data = col.get(include=["documents", "metadatas"])
-            self._bm25[col.name] = (data, BM25Okapi([tokenize(t) for t in data["documents"]]))
+            with span("bm25.build_index", col=col.name):   # once per process, whole collection
+                data = col.get(include=["documents", "metadatas"])
+                self._bm25[col.name] = (data, BM25Okapi([tokenize(t) for t in data["documents"]]))
         data, bm25 = self._bm25[col.name]
         scores = bm25.get_scores(tokenize(query))
         order = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)

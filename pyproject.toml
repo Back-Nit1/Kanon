@@ -20,6 +20,7 @@ dependencies = [
 [project.scripts]
 kanon = "kanon.cli:main"
 kanon-eval = "kanon.evals:main"
+kanon-dashboard = "kanon.dashboard:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]

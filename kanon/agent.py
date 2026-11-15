@@ -39,6 +39,7 @@ from pydantic import BaseModel, Field
 from kanon.ingest import Chunk
 from kanon.retrieval import CorpusIndex, Mode, is_record
 from kanon.store import AuthorityStore
+from kanon.timing import span
 from kanon.tools import make_tools
 
 
@@ -185,9 +186,10 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
     by_name = {t.name: t for t in tools}
 
     def classify_query(state: AgentState) -> dict:
-        qc = llm.with_structured_output(QueryClass).invoke([
-            SystemMessage(CLASSIFY_PROMPT.format(today=state["today"])),
-            HumanMessage(state["question"])])
+        with span("llm.classify"):
+            qc = llm.with_structured_output(QueryClass).invoke([
+                SystemMessage(CLASSIFY_PROMPT.format(today=state["today"])),
+                HumanMessage(state["question"])])
         controls = _question_controls(state["question"], qc)
         if qc.kind == "current":
             return {"query_kind": "current", "as_of": state["today"], **controls}
@@ -199,9 +201,10 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
         return {"query_kind": "time_anchored", "as_of": qc.as_of, **controls}
 
     def select_tools(state: AgentState) -> dict:
-        msg = llm.bind_tools(tools).invoke([
-            SystemMessage(SELECT_PROMPT.format(as_of=state["as_of"], kind=state["query_kind"])),
-            HumanMessage(state["question"])])
+        with span("llm.select_tools"):
+            msg = llm.bind_tools(tools).invoke([
+                SystemMessage(SELECT_PROMPT.format(as_of=state["as_of"], kind=state["query_kind"])),
+                HumanMessage(state["question"])])
         calls = [dict(call, args=dict(call["args"])) for call in msg.tool_calls]
         if state["needs_requirements"] and not any(
                 call["name"] == "search_current_requirements" for call in calls):
@@ -227,7 +230,8 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
                 violations.append(Violation(rule="as_of_mismatch", detail=(
                     f"{call['name']} called with as_of={call['args']['as_of']} but the question "
                     f"resolves to {state['as_of']}")))
-            result = tool.invoke(call["args"], config=config)   # config carries the trace callback
+            with span(f"tool.{call['name']}"):
+                result = tool.invoke(call["args"], config=config)   # config carries the trace callback
             if call["name"] in ("search_current_requirements", "find_precedent_events"):
                 chunks.extend(result)
                 if call["name"] == "search_current_requirements":
@@ -250,17 +254,18 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
     def resolve_authority(state: AgentState, config: RunnableConfig) -> dict:
         """Deterministic graph walk for every retrieved chunk's parent document."""
         authority = {}
-        for c in state["chunks"]:
-            if c.doc_key in authority or is_record(c.kind):
-                continue
-            governs = store.governs(c.doc_id, c.revision, state["as_of"])
-            res = store.resolve_authority(c.doc_id, state["as_of"])
-            authority[c.doc_key] = governs
-            dispatch_custom_event("authority_resolution", {
-                "doc_id": c.doc_id, "revision": c.revision, "status": c.status,
-                "as_of": state["as_of"], "governs": governs,
-                "authoritative": res.authoritative, "chain": res.chain,
-                "unresolved": res.unresolved}, config=config)
+        with span("authority.resolve", chunks=len(state["chunks"])):
+            for c in state["chunks"]:
+                if c.doc_key in authority or is_record(c.kind):
+                    continue
+                governs = store.governs(c.doc_id, c.revision, state["as_of"])
+                res = store.resolve_authority(c.doc_id, state["as_of"])
+                authority[c.doc_key] = governs
+                dispatch_custom_event("authority_resolution", {
+                    "doc_id": c.doc_id, "revision": c.revision, "status": c.status,
+                    "as_of": state["as_of"], "governs": governs,
+                    "authoritative": res.authoritative, "chain": res.chain,
+                    "unresolved": res.unresolved}, config=config)
         return {"authority": authority}
 
     def draft(state: AgentState) -> dict:
@@ -273,10 +278,11 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
             f"[{i}] doc_id={c.doc_id} | revision={c.revision} | page={c.page} | "
             f"section={c.section or '—'} | kind={c.kind}\n{c.text}" for i, c in enumerate(context, 1))
         records = "\n".join(state.get("records", [])) or "none"
-        d = llm.with_structured_output(Draft).invoke([
-            SystemMessage(DRAFT_PROMPT),
-            HumanMessage(f"Question: {state['question']}\n\nAuthority records (context only, not "
-                         f"citable):\n{records}\n\nSources:\n{sources}")])
+        with span("llm.draft", context_chunks=len(context), prompt_chars=len(sources)):
+            d = llm.with_structured_output(Draft).invoke([
+                SystemMessage(DRAFT_PROMPT),
+                HumanMessage(f"Question: {state['question']}\n\nAuthority records (context only, not "
+                             f"citable):\n{records}\n\nSources:\n{sources}")])
         return {"draft": d.answer, "citations": d.citations}
 
     def validate(state: AgentState, config: RunnableConfig) -> dict:

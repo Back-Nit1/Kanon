@@ -12,20 +12,20 @@ Operational verification and security notes: [VERIFICATION.md](VERIFICATION.md) 
 
 ## Layout
 
-| Layer | Module | What it does |
-|---|---|---|
-| 1 | `kanon/store.py` | Bi-temporal SQLite store + deterministic `resolve_authority` |
-| 1 | `kanon/supersession.py` | Verbatim supersession text → typed edges (regex, no LLM) |
-| 2 | `kanon/ingest.py` | Docling parse → page-anchored chunks with full metadata |
-| 2 | `kanon/queue.py` | Postgres queue, resumable workers, lifecycle audit, DLQ + chunk sidecar |
-| 2 | `kanon/retrieval.py` | Hot/cold Chroma + BM25, RRF fusion, modes `none`/`flag`/`graph` |
-| 3 | `kanon/tools.py` | Typed tools; `as_of` required; no unscoped search tool |
-| 3 | `kanon/agent.py` | LangGraph agent with the Tier B gate as a blocking node |
-| 3 | `kanon/trace.py` | Callback → human-readable trace per query |
-| 4A | `kanon/checks.py` | Pipeline integrity assertions (halt, never self-repair) |
-| 4B | `kanon/agent.py::check_citations` | Authority gate: deterministic, blocking in mode `graph` |
-| 4C | `kanon/judge.py` | LLM judge — advisory annotations only, cannot alter answer or gate |
-| eval | `kanon/evals.py`, `evals/questions.yaml` | Three-mode comparison; superseded-citation rate always paired with answer rate |
+| Layer | Module                                   | What it does                                                                   |
+| ----- | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| 1     | `kanon/store.py`                         | Bi-temporal SQLite store + deterministic `resolve_authority`                   |
+| 1     | `kanon/supersession.py`                  | Verbatim supersession text → typed edges (regex, no LLM)                       |
+| 2     | `kanon/ingest.py`                        | Docling parse → page-anchored chunks with full metadata                        |
+| 2     | `kanon/queue.py`                         | Postgres queue, resumable workers, lifecycle audit, DLQ + chunk sidecar        |
+| 2     | `kanon/retrieval.py`                     | Hot/cold Chroma + BM25, RRF fusion, modes `none`/`flag`/`graph`                |
+| 3     | `kanon/tools.py`                         | Typed tools; `as_of` required; no unscoped search tool                         |
+| 3     | `kanon/agent.py`                         | LangGraph agent with the Tier B gate as a blocking node                        |
+| 3     | `kanon/trace.py`                         | Callback → human-readable trace per query                                      |
+| 4A    | `kanon/checks.py`                        | Pipeline integrity assertions (halt, never self-repair)                        |
+| 4B    | `kanon/agent.py::check_citations`        | Authority gate: deterministic, blocking in mode `graph`                        |
+| 4C    | `kanon/judge.py`                         | LLM judge — advisory annotations only, cannot alter answer or gate             |
+| eval  | `kanon/evals.py`, `evals/questions.yaml` | Three-mode comparison; superseded-citation rate always paired with answer rate |
 
 **Requirements vs records.** Requirements state what governs (CFR sections, reg guides, tech
 specs, amendments) and are subject to the authority gate. Records state what happened on a
@@ -56,14 +56,14 @@ uv run kanon dlq                   # failed files, attempts, causes, source URLs
 uv run kanon dlq --failing         # revisions ranked by accumulated failures
 uv run kanon resolve 10CFR50.59 --as-of 2000-06-01
 uv run kanon ask "An engineer wants to replace a primary coolant pump..." --mode graph
+uv run kanon-dashboard             # localhost:8765, where an eval spends its time (reads traces/timing.jsonl)
 uv run kanon-eval                  # all three modes; --retrieval-only needs no chat model
 uv run pytest -q
 ```
 
 Ingest jobs move through `queued → parsing → validated → embedding → published`. Exceptions
 move a job to `failed` for retry; after three attempts it moves to the dead-letter queue. The
-database idempotency constraint is `(doc_id, revision, authority_status, source_sha256,
-chunking_version)`, so unchanged documents cannot be re-enqueued accidentally. A Postgres
+database idempotency constraint is `(doc_id, revision, authority_status, source_sha256, chunking_version)`, so unchanged documents cannot be re-enqueued accidentally. A Postgres
 trigger appends every lifecycle transition to immutable `job_events` in the same transaction.
 Malformed-file diagnostics are recorded at enqueue time, but the worker still performs the
 configured retries so transient downloads and parser failures follow one review path.
@@ -81,6 +81,6 @@ configured retries so transient downloads and parser failures follow one review 
   paragraphs of unrelated text under the NRC doc id. Page ranges can't fix it; text markers
   (the NRC heading and the "[FR Doc. …]" line) could. Records only, never requirements.
 - **Partial supersession is document-level.** The gate knows a document is partially superseded
-  and both versions govern; it doesn't know *which sections* (that's in `scope_note` prose).
+  and both versions govern; it doesn't know _which sections_ (that's in `scope_note` prose).
 - Not in the public record, so not in this corpus: controlled drawings, design calculations,
   maintenance history, and plant procedures such as MP-033.05 (only referenced by inspection reports).

@@ -44,6 +44,7 @@ from pydantic import BaseModel
 from kanon.ingest import Chunk
 from kanon.retrieval import CorpusIndex, is_record
 from kanon.store import AuthorityStore
+from kanon.timing import set_context, span
 
 MODES = ("none", "flag", "graph")
 # The cases where a status flag is structurally blind and the bi-temporal graph is not. The spec
@@ -160,7 +161,9 @@ def retrieval_eval(index: CorpusIndex, store: AuthorityStore, today: date,
     rows = []
     for q in questions:
         as_of = q.authority_date(today)
-        chunks = index.search(q.question, k if rerank is None else 3 * k, mode, as_of)
+        set_context(phase="retrieval", mode=mode, qid=q.id)
+        with span("eval.retrieval_question"):
+            chunks = index.search(q.question, k if rerank is None else 3 * k, mode, as_of)
         if rerank is not None:
             chunks = rerank(q.question, chunks)[:k]
         rows.append(retrieval_row(q, chunks, store, as_of))
@@ -209,14 +212,17 @@ def generation_eval(llm, index: CorpusIndex, store: AuthorityStore, today: date,
     rows = []
     for q in questions:
         recorder = TraceRecorder()
-        state = agent.invoke({"question": q.question, "mode": mode, "today": today},
-                             config={"callbacks": [recorder]})
+        set_context(phase="generation", mode=mode, qid=q.id)
+        with span("eval.generation_question"):
+            state = agent.invoke({"question": q.question, "mode": mode, "today": today},
+                                 config={"callbacks": [recorder]})
         # One directory per question: TraceRecorder names files by the second, so two fast
         # questions in one directory would overwrite each other.
         path = recorder.write(trace_dir / mode / q.id, state)
         if judge_llm is not None:
             from kanon.judge import append_to_trace, review
-            append_to_trace(path, review(judge_llm, state), judge_model)
+            with span("llm.judge"):
+                append_to_trace(path, review(judge_llm, state), judge_model)
         rows.append({**generation_row(q, state, store, q.authority_date(today)), "trace": str(path)})
     return rows
 
