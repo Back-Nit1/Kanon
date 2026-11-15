@@ -25,6 +25,8 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("worker")
     d = sub.add_parser("dlq")
     d.add_argument("--requeue", metavar="IDEM_KEY")
+    d.add_argument("--failing", action="store_true",
+                   help="Rank documents by accumulated failures across ingest jobs.")
     r = sub.add_parser("resolve")
     r.add_argument("doc_id")
     r.add_argument("--as-of", type=date.fromisoformat, required=True)
@@ -71,12 +73,15 @@ def main(argv: list[str] | None = None) -> int:
             ok = queue.requeue(conn, args.requeue)
             print("requeued; run `kanon worker`" if ok else f"no dead job with key {args.requeue}")
             return 0 if ok else 1
+        if args.failing:
+            print(queue.failing_documents_report(conn))
+            return 0
         print(queue.dead_letter_report(conn))
         return 0
 
     from kanon.llm import embeddings
     from kanon.retrieval import CorpusIndex, open_chroma
-    index = CorpusIndex(open_chroma(s), embeddings(s), store)
+    index = CorpusIndex(open_chroma(s), embeddings(s), store, expected_dim=s.embedding_dim)
 
     if args.cmd in ("ingest", "worker"):
         from docling.chunking import HybridChunker
@@ -84,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
         from kanon.ingest import Chunk, make_converter
         conn = queue.connect(s.pg_dsn)
         if args.cmd == "ingest":
-            print(f"queued {queue.enqueue_manifest(conn, s.data_dir)} new job(s)")
+            print(f"queued {queue.enqueue_manifest(conn, s.data_dir, store)} new job(s)")
         queue.run_worker(conn, s.data_dir, store, index, make_converter(), HybridChunker())
         if args.cmd == "worker":
             return 0

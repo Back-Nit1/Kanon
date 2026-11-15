@@ -25,6 +25,7 @@ unscoped call to slip in, and the trace gets harder to read. ponytail: add a bou
 
 import json
 import operator
+import re
 from datetime import date
 from typing import Annotated, Literal, TypedDict
 
@@ -50,6 +51,12 @@ class QueryClass(BaseModel):
         default=None,
         description="For time_anchored only: the date the question is about. If only a month or "
                     "year is given, use the first day of that period. Null for current.")
+    needs_requirements: bool = Field(
+        default=True,
+        description="True when the question asks what governs, permits, requires, or approves an action.")
+    plant: str | None = Field(default=None, description="Plant/facility named by the user, if any.")
+    unit: str | None = Field(default=None, description="Unit number named by the user, if any.")
+    docket: str | None = Field(default=None, description="NRC docket identifier named by the user, if any.")
 
 
 class Citation(BaseModel):
@@ -75,7 +82,7 @@ class Violation(BaseModel):
 # the superseded-citation rate is measured for the baselines. Integrity rules (nothing cited,
 # citing text that was never retrieved) block in every mode: there is no answer to measure.
 AUTHORITY_RULES = {"superseded", "not_governing_on_as_of", "unresolved_supersession",
-                   "as_of_mismatch", "no_governing_requirement"}
+                   "as_of_mismatch", "no_governing_requirement", "no_requirement_citation"}
 
 
 class AgentState(TypedDict, total=False):
@@ -84,6 +91,10 @@ class AgentState(TypedDict, total=False):
     today: date
     query_kind: str
     as_of: date | None
+    needs_requirements: bool
+    plant: str | None
+    unit: str | None
+    docket: str | None
     tool_calls: list[dict]
     chunks: list[Chunk]
     records: list[str]                 # revision histories / resolutions: context, not citable
@@ -97,11 +108,14 @@ class AgentState(TypedDict, total=False):
 
 CLASSIFY_PROMPT = """You classify questions from nuclear engineers about NRC requirements.
 Today's date is {today}. Decide whether the question asks what governs now ('current') or what
-governed at a specific past date or event ('time_anchored'), and extract that date."""
+governed at a specific past date or event ('time_anchored'), and extract that date. Also extract
+any plant/facility, unit, or docket stated by the user, and whether governing requirements are
+needed in addition to historical-event records."""
 
 SELECT_PROMPT = """You gather evidence for a nuclear licensing question.
 Authority date: {as_of} ({kind} question).
 - For governing requirements call search_current_requirements with as_of={as_of}.
+- Pass any plant, unit, and docket identifiers supplied in the question to the search tools.
 - If the question asks whether something went wrong before, or about prior events, also call
   find_precedent_events.
 - If the question names a specific document, call get_revision_history and/or resolve_supersession.
@@ -113,6 +127,22 @@ DRAFT_PROMPT = """Answer the engineer's question using ONLY the numbered sources
   changes, not current requirements; say so when used, and never present one as what governs.
 - If the sources don't answer part of the question, say what is missing. Do not fill gaps.
 - Do not judge which documents are current or authoritative; that is checked separately."""
+
+
+_UNIT_IN_QUESTION = re.compile(r"(?i)\bunit(?:\s+(?:number|no\.?))?\s*[:#-]?\s*(\d+[A-Za-z]?)\b")
+_DOCKET_IN_QUESTION = re.compile(
+    r"(?i)\bdocket(?:\s+(?:number|no\.?|id))?\s*[:#]?\s*([A-Z0-9][A-Z0-9.-]{2,30})")
+_REQUIREMENT_INTENT = re.compile(
+    r"(?i)\b(govern(?:s|ing|ed)?|requirements?|required|approval|approve|permit(?:ted)?|"
+    r"10\s*CFR|regulatory\s+guide|\bRG\s*\d|procedure|technical\s+specification)\b")
+
+
+def _question_controls(question: str, qc: QueryClass) -> dict:
+    """Controls derived before tool selection; explicit identifiers cannot be dropped by it."""
+    unit = (m.group(1) if (m := _UNIT_IN_QUESTION.search(question)) else None) or qc.unit
+    docket = (m.group(1) if (m := _DOCKET_IN_QUESTION.search(question)) else None) or qc.docket
+    return {"needs_requirements": qc.needs_requirements or bool(_REQUIREMENT_INTENT.search(question)),
+            "plant": qc.plant, "unit": unit, "docket": docket}
 
 
 def check_citations(store: AuthorityStore, citations: list[Citation], retrieved: list[Chunk],
@@ -158,19 +188,32 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
         qc = llm.with_structured_output(QueryClass).invoke([
             SystemMessage(CLASSIFY_PROMPT.format(today=state["today"])),
             HumanMessage(state["question"])])
+        controls = _question_controls(state["question"], qc)
         if qc.kind == "current":
-            return {"query_kind": "current", "as_of": state["today"]}
+            return {"query_kind": "current", "as_of": state["today"], **controls}
         if qc.as_of is None:
-            return {"query_kind": "time_anchored", "as_of": None, "violations": [Violation(
+            return {"query_kind": "time_anchored", "as_of": None, **controls,
+                    "violations": [Violation(
                 rule="no_as_of", detail="question is time-anchored but no date could be extracted; "
                                         "authority cannot be resolved without one")]}
-        return {"query_kind": "time_anchored", "as_of": qc.as_of}
+        return {"query_kind": "time_anchored", "as_of": qc.as_of, **controls}
 
     def select_tools(state: AgentState) -> dict:
         msg = llm.bind_tools(tools).invoke([
             SystemMessage(SELECT_PROMPT.format(as_of=state["as_of"], kind=state["query_kind"])),
             HumanMessage(state["question"])])
-        return {"tool_calls": msg.tool_calls}
+        calls = [dict(call, args=dict(call["args"])) for call in msg.tool_calls]
+        if state["needs_requirements"] and not any(
+                call["name"] == "search_current_requirements" for call in calls):
+            calls.append({"name": "search_current_requirements", "id": "required-by-gate",
+                          "args": {"query": state["question"],
+                                   "as_of": state["as_of"].isoformat()}})
+        for call in calls:
+            if call["name"] in ("search_current_requirements", "find_precedent_events"):
+                for field in ("plant", "unit", "docket"):
+                    if state.get(field):
+                        call["args"][field] = state[field]
+        return {"tool_calls": calls}
 
     def retrieve(state: AgentState, config: RunnableConfig) -> dict:
         chunks, records, violations = [], [], []
@@ -191,7 +234,7 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
                     requirement_hits.append(len(result))
             else:
                 records.append(f"{call['name']}({call['args']}): {json.dumps(_dump(result), default=str)}")
-        if requirement_hits and not any(requirement_hits):
+        if state["needs_requirements"] and (not requirement_hits or not any(requirement_hits)):
             # The agent asked what governed and nothing did. Precedent records may still have been
             # found, but an answer built only from records would answer a requirements question
             # with no requirement — and records are exempt from the governing check, so the gate
@@ -240,6 +283,11 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
         new = ([] if not state.get("draft") else
                check_citations(store, state["citations"], state["chunks"], state["as_of"],
                                state["query_kind"]))
+        if state.get("draft") and state["needs_requirements"]:
+            cited_docs = [store.get(c.doc_id, c.revision) for c in state["citations"]]
+            if cited_docs and all(doc is None or is_record(doc.kind) for doc in cited_docs):
+                new.append(Violation(rule="no_requirement_citation", detail=(
+                    "the question asks for governing requirements but the answer cites only records")))
         everything = state.get("violations", []) + new
         enforced = [v for v in everything if mode == "graph" or v.rule not in AUTHORITY_RULES]
         decision = "abstain" if enforced else "answer"

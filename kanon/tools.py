@@ -24,6 +24,9 @@ class CurrentRequirementsArgs(BaseModel):
     query: str = Field(description="What requirement to look for, in regulatory language.")
     as_of: date = Field(description="The date the requirements must have governed on. Required. "
                                     "Use today's date for questions about current requirements.")
+    plant: str | None = None
+    unit: str | None = None
+    docket: str | None = None
 
 
 class RevisionHistoryArgs(BaseModel):
@@ -41,6 +44,9 @@ class PrecedentArgs(BaseModel):
     symptom: str = Field(description="What went wrong or what change was made, e.g. 'seal leak', "
                                      "'inadequate 50.59 evaluation'.")
     since: date | None = Field(default=None, description="Only events on/after this date.")
+    plant: str | None = None
+    unit: str | None = None
+    docket: str | None = None
 
 
 def make_tools(index: CorpusIndex, store: AuthorityStore, mode: Mode, k: int = 8) -> list[BaseTool]:
@@ -48,10 +54,11 @@ def make_tools(index: CorpusIndex, store: AuthorityStore, mode: Mode, k: int = 8
     in all three modes without the model ever seeing (or choosing) the mode."""
 
     @tool(args_schema=CurrentRequirementsArgs)
-    def search_current_requirements(query: str, as_of: date) -> list[Chunk]:
+    def search_current_requirements(query: str, as_of: date, plant: str | None = None,
+                                    unit: str | None = None, docket: str | None = None) -> list[Chunk]:
         """Search only documents governing on `as_of` (regulations, guides, tech specs,
         amendments). `as_of` is REQUIRED."""
-        return index.search(query, k, mode, as_of)
+        return index.search(query, k, mode, as_of, plant=plant, unit=unit, docket=docket)
 
     @tool(args_schema=RevisionHistoryArgs)
     def get_revision_history(doc_id: str) -> list[DocumentVersion]:
@@ -67,7 +74,9 @@ def make_tools(index: CorpusIndex, store: AuthorityStore, mode: Mode, k: int = 8
         return store.resolve_authority(doc_id, as_of)
 
     @tool(args_schema=PrecedentArgs)
-    def find_precedent_events(system: str, symptom: str, since: date | None = None) -> list[Chunk]:
+    def find_precedent_events(system: str, symptom: str, since: date | None = None,
+                              plant: str | None = None, unit: str | None = None,
+                              docket: str | None = None) -> list[Chunk]:
         """Search the historical record for prior occurrences: operating experience (inspection
         reports, enforcement actions, event reports) and rulemaking history (Federal Register
         rules and notices).
@@ -77,7 +86,7 @@ def make_tools(index: CorpusIndex, store: AuthorityStore, mode: Mode, k: int = 8
         enforcement action is still true about 1996; it would only be wrong to cite it as a
         current requirement — and the gate exempts only the explicit RECORD_KINDS from the
         governing check, nothing else."""
-        return index.search_precedent(f"{system} {symptom}", k, since)
+        return index.search_precedent(f"{system} {symptom}", k, since, plant=plant, unit=unit, docket=docket)
 
     return [search_current_requirements, get_revision_history, resolve_supersession,
             find_precedent_events]

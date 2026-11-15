@@ -167,3 +167,22 @@ def test_graph_abstains_when_nothing_governed_on_the_date(world):
         {"question": "What governed a pump replacement in April 1996?", "mode": "graph", "today": TODAY})
     assert out["decision"] == "abstain"
     assert "no_governing_requirement" in {v.rule for v in out["violations"]}
+
+
+def test_requirements_search_is_added_when_model_omits_it(world):
+    store, index, _ = world
+
+    class OmitSearchLLM(StubLLM):
+        def bind_tools(self, tools):
+            class Runner:
+                def invoke(self, messages):
+                    return AIMessage(content="", tool_calls=[{
+                        "name": "get_revision_history", "id": "history-only",
+                        "args": {"doc_id": "10CFR50.59"}}])
+            return Runner()
+
+    out = build_agent(OmitSearchLLM("2002-01-01"), index, store, "graph").invoke(
+        {"question": "What requirements govern a 50.59 evaluation?",
+         "mode": "graph", "today": TODAY})
+    assert any(c["name"] == "search_current_requirements" for c in out["tool_calls"])
+    assert out["decision"] == "answer"

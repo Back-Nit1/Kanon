@@ -25,7 +25,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS documents (
@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS documents (
   status          TEXT NOT NULL CHECK (status IN ('active','superseded','withdrawn')),
   accession       TEXT,
   source_url      TEXT,
+  plants          TEXT NOT NULL DEFAULT '[]', -- JSON array; empty means not recorded
+  units           TEXT NOT NULL DEFAULT '[]', -- JSON array; never infer a unit from a docket
+  dockets         TEXT NOT NULL DEFAULT '[]', -- JSON array; plant or rulemaking dockets
+  applicability_scope TEXT NOT NULL DEFAULT 'unknown'
+                 CHECK (applicability_scope IN ('global','facility','unknown')),
   PRIMARY KEY (doc_id, revision)
 );
 
@@ -80,10 +85,28 @@ class DocumentVersion(BaseModel):
     status: Literal["active", "superseded", "withdrawn"]
     accession: str | None = None
     source_url: str | None = None
+    # Applicability is structured metadata, not free-form notes. Multiple units/dockets are
+    # common, so these are lists rather than lossy comma-separated strings. Empty means unknown,
+    # never "all". Global applicability must be explicitly recorded.
+    plants: list[str] = Field(default_factory=list)
+    units: list[str] = Field(default_factory=list)
+    dockets: list[str] = Field(default_factory=list)
+    applicability_scope: Literal["global", "facility", "unknown"] | None = None
 
     @property
     def key(self) -> tuple[str, str]:
         return (self.doc_id, self.revision)
+
+    def resolved_applicability_scope(self) -> Literal["global", "facility", "unknown"]:
+        """Resolve scope from trusted structured fields; free-form text never makes it global."""
+        if self.plants or self.units or self.dockets:
+            return "facility"
+        # `regulation` is a closed, loader-controlled kind and is searched as a governing rule
+        # across facilities. Without this, adding a plant/unit filter would incorrectly hide
+        # 10 CFR requirements from every facility-scoped question.
+        if self.kind == "regulation":
+            return "global"
+        return self.applicability_scope or "unknown"
 
 
 class Edge(BaseModel):
@@ -128,6 +151,37 @@ class AuthorityStore:
         self.db = sqlite3.connect(str(path))
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)
+        self._migrate_document_metadata()
+
+    def _migrate_document_metadata(self) -> None:
+        """SQLite's CREATE TABLE IF NOT EXISTS does not add new columns to an existing DB.
+
+        Additive nullable/defaulted columns preserve existing authority stores. Applicability is
+        deliberately unknown until structured metadata is provided or deterministic layout
+        extraction succeeds during ingest.
+        """
+        existing = {r["name"] for r in self.db.execute("PRAGMA table_info(documents)")}
+        additions = {
+            "plants": "TEXT NOT NULL DEFAULT '[]'",
+            "units": "TEXT NOT NULL DEFAULT '[]'",
+            "dockets": "TEXT NOT NULL DEFAULT '[]'",
+            "applicability_scope": "TEXT NOT NULL DEFAULT 'unknown'",
+        }
+        for name, declaration in additions.items():
+            if name not in existing:
+                self.db.execute(f"ALTER TABLE documents ADD COLUMN {name} {declaration}")
+        schema = self.db.execute("SELECT sql FROM sqlite_master WHERE name='documents'").fetchone()[0]
+        if "'generic'" in schema:
+            # Migrate an early development schema without treating its inferred generic scope
+            # as trusted global scope. There are no foreign keys to documents in this store.
+            self.db.execute("ALTER TABLE documents RENAME TO documents_old_scope")
+            self.db.execute(SCHEMA.split("CREATE TABLE IF NOT EXISTS supersession_edges")[0])
+            self.db.execute("""INSERT INTO documents SELECT doc_id, revision, family, kind, title,
+                effective_from, effective_to, issue_date, ingested_at, status, accession, source_url,
+                plants, units, dockets, CASE WHEN applicability_scope='generic' THEN 'unknown'
+                ELSE applicability_scope END FROM documents_old_scope""")
+            self.db.execute("DROP TABLE documents_old_scope")
+        self.db.commit()
 
     # ---- writes ---------------------------------------------------------------------------
 
@@ -135,15 +189,22 @@ class AuthorityStore:
         # ponytail: overwrite on re-ingest, so record-time history of *document metadata* is
         # not kept (edges keep theirs). Add a documents_history table if metadata audits matter.
         self.db.execute(
-            """INSERT INTO documents VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+            """INSERT INTO documents
+               (doc_id, revision, family, kind, title, effective_from, effective_to, issue_date,
+                ingested_at, status, accession, source_url, plants, units, dockets,
+                applicability_scope)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT (doc_id, revision) DO UPDATE SET
                  family=excluded.family, kind=excluded.kind, title=excluded.title,
                  effective_from=excluded.effective_from, effective_to=excluded.effective_to,
                  issue_date=excluded.issue_date, status=excluded.status,
-                 accession=excluded.accession, source_url=excluded.source_url""",
+                 accession=excluded.accession, source_url=excluded.source_url,
+                 plants=excluded.plants, units=excluded.units, dockets=excluded.dockets,
+                 applicability_scope=excluded.applicability_scope""",
             (d.doc_id, d.revision, d.family, d.kind, d.title,
              _iso(d.effective_from), _iso(d.effective_to), _iso(d.issue_date), _now(),
-             d.status, d.accession, d.source_url),
+             d.status, d.accession, d.source_url, json.dumps(d.plants), json.dumps(d.units),
+             json.dumps(d.dockets), d.resolved_applicability_scope()),
         )
         self.db.commit()
 
@@ -314,7 +375,10 @@ def _doc(r: sqlite3.Row) -> DocumentVersion:
         doc_id=r["doc_id"], revision=r["revision"], family=r["family"], kind=r["kind"],
         title=r["title"], effective_from=_d(r["effective_from"]), effective_to=_d(r["effective_to"]),
         issue_date=_d(r["issue_date"]), status=r["status"], accession=r["accession"],
-        source_url=r["source_url"])
+        source_url=r["source_url"], plants=json.loads(r["plants"] or "[]"),
+        units=json.loads(r["units"] or "[]"), dockets=json.loads(r["dockets"] or "[]"),
+        applicability_scope=("unknown" if r["applicability_scope"] == "generic"
+                             else r["applicability_scope"]))
 
 
 def _edge(r: sqlite3.Row) -> Edge:

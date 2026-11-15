@@ -23,6 +23,10 @@ def chat_model(settings: Settings, role: str = "rag") -> BaseChatModel:
     # the resolver and gate are deterministic; only answer wording varies run to run.
     temperature = os.environ.get("KANON_TEMPERATURE")
     kwargs = {"temperature": float(temperature)} if temperature else {}
+    # Keep reasoning deliberate and predictable for OpenAI reasoning models. Do not send this
+    # provider-specific option to an independently configured non-OpenAI judge.
+    if model.startswith("openai:"):
+        kwargs["reasoning_effort"] = os.environ.get("KANON_REASONING_EFFORT", "medium")
     return init_chat_model(model, **kwargs)
 
 
