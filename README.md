@@ -7,6 +7,9 @@ cross-family, and effective dates differ from issue dates (10 CFR 50.59's 1999 r
 published 1999-10-04 and took effect 2001-03-13). It needs a bi-temporal supersession graph,
 enforcement at the tool interface, and abstention when authority can't be resolved.
 
+Operational verification and security notes: [VERIFICATION.md](VERIFICATION.md) and
+[SECURITY_REVIEW.md](SECURITY_REVIEW.md).
+
 ## Layout
 
 | Layer | Module | What it does |
@@ -14,6 +17,7 @@ enforcement at the tool interface, and abstention when authority can't be resolv
 | 1 | `kanon/store.py` | Bi-temporal SQLite store + deterministic `resolve_authority` |
 | 1 | `kanon/supersession.py` | Verbatim supersession text → typed edges (regex, no LLM) |
 | 2 | `kanon/ingest.py` | Docling parse → page-anchored chunks with full metadata |
+| 2 | `kanon/queue.py` | Postgres queue, resumable workers, lifecycle audit, DLQ + chunk sidecar |
 | 2 | `kanon/retrieval.py` | Hot/cold Chroma + BM25, RRF fusion, modes `none`/`flag`/`graph` |
 | 3 | `kanon/tools.py` | Typed tools; `as_of` required; no unscoped search tool |
 | 3 | `kanon/agent.py` | LangGraph agent with the Tier B gate as a blocking node |
@@ -29,18 +33,40 @@ date — inspection reports, enforcement actions, Federal Register rules and not
 searched only by `find_precedent_events`, exempt from the governing check. The CFR is the
 codified law; the Federal Register is its change log. Unknown kinds default to requirement.
 
+Applicability filters accept plant, unit, and docket identifiers. Every supplied identifier must
+match recorded facility metadata; unknown metadata is excluded. A document explicitly marked
+`applicability_scope=global` remains eligible; the loader also assigns the closed `regulation`
+kind global scope so facility filters cannot hide generally applicable 10 CFR requirements.
+Applicability is taken from manifest/authority
+fields or strict labeled first-page text, and unrecorded fields remain unknown. The Postgres
+chunk sidecar stores these fields alongside revision, status, dates and source provenance.
+Both dense and BM25 retrieval are filtered before reciprocal-rank fusion. A changed chunking
+version requires re-ingestion before existing indexed documents gain this metadata.
+
 ## Run
 
 ```bash
 uv sync
-cp .env.example .env               # set OPENAI_API_KEY
+cp .env.example .env               # model-provider keys are needed only for embedding/answering
+docker compose up -d               # Postgres queue + Chroma server
 uv run kanon load                  # data/manifest.jsonl + labels -> authority.db
-uv run kanon ingest                # parse, chunk, embed, Tier A checks
+uv run kanon ingest                # enqueue, parse, validate, embed, publish
+uv run kanon worker                # optional additional SKIP LOCKED worker
+uv run kanon dlq                   # failed files, attempts, causes, source URLs
+uv run kanon dlq --failing         # revisions ranked by accumulated failures
 uv run kanon resolve 10CFR50.59 --as-of 2000-06-01
 uv run kanon ask "An engineer wants to replace a primary coolant pump..." --mode graph
 uv run kanon-eval                  # all three modes; --retrieval-only needs no chat model
 uv run pytest -q
 ```
+
+Ingest jobs move through `queued → parsing → validated → embedding → published`. Exceptions
+move a job to `failed` for retry; after three attempts it moves to the dead-letter queue. The
+database idempotency constraint is `(doc_id, revision, authority_status, source_sha256,
+chunking_version)`, so unchanged documents cannot be re-enqueued accidentally. A Postgres
+trigger appends every lifecycle transition to immutable `job_events` in the same transaction.
+Malformed-file diagnostics are recorded at enqueue time, but the worker still performs the
+configured retries so transient downloads and parser failures follow one review path.
 
 ## Known limitations
 
