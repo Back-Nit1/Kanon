@@ -35,3 +35,11 @@ def test_deadline_interrupts_a_blocking_call():
 def test_no_deadline_is_a_noop():
     with timing.deadline(0):
         pass
+
+
+def test_dlq_endpoint_reports_unreachable_db_not_empty(monkeypatch):
+    # empty queue and unreachable DB must look different on the dashboard
+    from kanon import dashboard, queue
+    monkeypatch.setattr(queue, "connect", lambda dsn: (_ for _ in ()).throw(OSError("down")))
+    d = dashboard.load_dlq()
+    assert d["ok"] is False and "OSError" in d["error"]

@@ -42,6 +42,23 @@ def trace_times(trace_dir: Path) -> list[dict]:
     return sorted(rows, key=lambda r: r["done"])
 
 
+def load_dlq() -> dict:
+    """Dead-letter queue straight from Postgres (view dead_letter_queue). If the DB is down the
+    dashboard says so instead of showing an empty queue: empty and unreachable must not look alike."""
+    try:
+        from kanon import queue
+        from kanon.config import load_settings
+        conn = queue.connect(load_settings().pg_dsn)
+        rows = conn.execute("SELECT idem_key, doc_id, revision, attempts, total_attempts, last_stage,"
+                            " errors, updated_at FROM dead_letter_queue ORDER BY updated_at DESC").fetchall()
+        counts = conn.execute("SELECT status, count(*) AS n FROM ingest_jobs GROUP BY status").fetchall()
+        conn.close()
+        return {"ok": True, "max_attempts": queue.MAX_ATTEMPTS, "rows": rows,
+                "counts": {c["status"]: c["n"] for c in counts}}
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:160]}"}
+
+
 class Handler(BaseHTTPRequestHandler):
     log: Path = timing.LOG
     trace_dir: Path = ROOT / "traces"
@@ -52,6 +69,8 @@ class Handler(BaseHTTPRequestHandler):
                                "traces": trace_times(self.trace_dir),
                                "log": str(self.log)}).encode()
             self._send(200, "application/json", body)
+        elif self.path == "/api/dlq":
+            self._send(200, "application/json", json.dumps(load_dlq(), default=str).encode())
         elif self.path in ("/", "/index.html"):
             self._send(200, "text/html; charset=utf-8", PAGE.read_bytes())
         else:

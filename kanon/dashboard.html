@@ -42,6 +42,7 @@ select{font:inherit;background:var(--card);color:var(--ink);border:1px solid var
   <div><span class="pill" id="status">loading</span> <select id="mode"><option value="">all modes</option></select></div>
 </div>
 <div class="card verdict" id="verdict">Waiting for data…</div>
+<div class="card" id="dlqCard"><h2>Dead letter queue</h2><div id="dlq" class="mute">loading…</div></div>
 <div class="card"><h2>Where time goes</h2>
   <div class="legend" id="legend"></div>
   <div class="scroll"><table id="stages"></table></div></div>
@@ -168,7 +169,19 @@ async function poll(){
     render();
   }catch(e){ $("status").textContent="server unreachable"; }
 }
+async function pollDlq(){
+  let d; try{ d = await (await fetch("/api/dlq")).json(); }catch(e){ return; }
+  const el = $("dlq");
+  if(!d.ok){ el.innerHTML = `<span style="color:var(--warn)">Postgres unreachable, queue state unknown: ${d.error}</span>`; return; }
+  const c = Object.entries(d.counts).map(([k,v])=>`${k}: ${v}`).join(" · ") || "no jobs";
+  if(!d.rows.length){ el.innerHTML = `Empty. A job moves here after ${d.max_attempts} failed attempts. (${c})`; return; }
+  el.innerHTML = `<div style="color:var(--warn)">${d.rows.length} document(s) failed ${d.max_attempts}x and are NOT searchable.</div><div class=mute>${c}</div>`+
+    `<div class=scroll><table><tr><th>document</th><th>stage</th><th class=n>attempts</th><th>last error</th><th>requeue</th></tr>`+
+    d.rows.map(r=>{const e=(r.errors||[]).slice(-1)[0]||{};
+      return `<tr><td>${r.doc_id} Rev ${r.revision}</td><td>${r.last_stage||""}</td><td class=n>${r.attempts}/${d.max_attempts}</td><td>${e.type||""}: ${(e.message||e.error||"").toString().slice(0,100)}</td><td><code>kanon dlq --requeue '${r.idem_key}'</code></td></tr>`}).join("")+`</table></div>`;
+}
 $("mode").onchange = render;
+pollDlq(); setInterval(pollDlq, 5000);
 poll(); setInterval(poll, 3000);
 </script>
 </body></html>
