@@ -1,0 +1,105 @@
+{
+  "data" : {
+    "id" : "NRC-2025-0975-0004",
+    "type" : "documents",
+    "links" : {
+      "self" : "https://api.regulations.gov/v4/documents/NRC-2025-0975-0004"
+    },
+    "attributes" : {
+      "additionalRins" : null,
+      "allowLateComments" : false,
+      "authorDate" : null,
+      "authors" : null,
+      "cfrPart" : null,
+      "commentEndDate" : null,
+      "commentStartDate" : null,
+      "effectiveDate" : null,
+      "exhibitLocation" : null,
+      "exhibitType" : null,
+      "frDocNum" : null,
+      "frVolNum" : null,
+      "implementationDate" : null,
+      "media" : null,
+      "ombApproval" : null,
+      "paperLength" : 0,
+      "paperWidth" : 0,
+      "regWriterInstruction" : null,
+      "sourceCitation" : null,
+      "startEndPage" : null,
+      "subject" : null,
+      "topics" : null,
+      "address1" : null,
+      "address2" : null,
+      "agencyId" : "NRC",
+      "city" : null,
+      "category" : null,
+      "comment" : null,
+      "country" : null,
+      "displayProperties" : [ {
+        "name" : "legacyId",
+        "label" : "Accession Number",
+        "tooltip" : "Agency-specific identifier which was given to this document in legacy system"
+      }, {
+        "name" : "pageCount",
+        "label" : "Page Count",
+        "tooltip" : "Number of pages In the content file"
+      }, {
+        "name" : "postmarkDate",
+        "label" : "Document Date",
+        "tooltip" : "Date the document was postmarked"
+      } ],
+      "docAbstract" : null,
+      "docketId" : "NRC-2025-0975",
+      "documentType" : "Supporting & Related Material",
+      "email" : null,
+      "fax" : null,
+      "field1" : null,
+      "field2" : null,
+      "fileFormats" : [ {
+        "fileUrl" : "https://downloads.regulations.gov/NRC-2025-0975-0004/content.pdf",
+        "format" : "pdf",
+        "size" : 279516
+      } ],
+      "firstName" : null,
+      "govAgency" : null,
+      "govAgencyType" : null,
+      "objectId" : "09000064b93a1dfa",
+      "lastName" : null,
+      "legacyId" : "ML25272A138",
+      "modifyDate" : "2026-07-16T22:07:19Z",
+      "organization" : null,
+      "originalDocumentId" : null,
+      "pageCount" : 20,
+      "phone" : null,
+      "postedDate" : "2026-07-16T04:00:00Z",
+      "postmarkDate" : "2026-07-14T04:00:00Z",
+      "reasonWithdrawn" : null,
+      "receiveDate" : "2026-07-16T04:00:00Z",
+      "restrictReason" : null,
+      "restrictReasonType" : null,
+      "stateProvinceRegion" : null,
+      "submitterRep" : null,
+      "submitterRepAddress" : null,
+      "submitterRepCityState" : null,
+      "subtype" : null,
+      "title" : "DG-1466 Guidance for Implementation of 10 CFR 50.59 Changes Tests and Experiments Proposed Revision 4 to Regulatory Guide 1.187",
+      "trackingNbr" : "mrn-ro4v-repd",
+      "withdrawn" : false,
+      "zip" : null,
+      "withinCommentPeriod" : false,
+      "openForComment" : false
+    },
+    "relationships" : {
+      "attachments" : {
+        "data" : [ ],
+        "links" : {
+          "self" : "https://api.regulations.gov/v4/documents/NRC-2025-0975-0004/relationships/attachments",
+          "related" : "https://api.regulations.gov/v4/documents/NRC-2025-0975-0004/attachments"
+        }
+      }
+    }
+  },
+  "links" : {
+    "self" : "https://regulations.gov/v4/documents/NRC-2025-0975-0004?include=attachments"
+  }
+}
