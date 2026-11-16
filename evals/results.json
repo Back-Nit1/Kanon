@@ -1,0 +1,2431 @@
+{
+  "questions_file": "/Users/nityanthmaramreddy/gord-demo/evals/questions.yaml",
+  "questions_sha256": "f8b0c41b43020b2b95d2f76e4c112d4e5e6c7fefd06c8775690f6205cbb18b4b",
+  "today": "2026-11-14",
+  "k": 8,
+  "n_questions": 32,
+  "n_qa": 19,
+  "n_resolver": 13,
+  "categories": {
+    "control": 6,
+    "conflict_window": 2,
+    "anchor": 1,
+    "time_anchored": 10,
+    "cross_family": 6,
+    "effective_after_issue": 7
+  },
+  "coverage_notes": [
+    "Effective date AFTER issue date: real and tested. (1) The 1999 rewrite of 10 CFR 50.59 was published 1999-10-04 but took effect 2001-03-13, a date set by a different document (M8, E2, E4, E6): q04, q05, q06. (2) The 2024 and 2025 amendments each took effect 30 days after publication (M12, M13): q11, q12, q13. (3) RG 1.187 Rev 2 is dated 06/2020 in the index, but 'takes effect on July 7, 2020' (E33): resolver r03 (metadata only, no guide text).",
+    "Cross-family supersession: tested at the STORE level only (resolver questions r05, r06, r08, r09, r11, r13). There is no guide text in the corpus, so it is NOT measurable at the retrieval or generation level. Those flag-baseline answers are the status column; a flag RAG system could still read the right successor from the FR withdrawal notice's prose, so the store-level comparison understates flag. Where the source names no successor revision (E13 'incorporated into RG 1.82'; E17 'RG 1.183 ... and RG 1.195'), the loader pins the revision in effect on the withdrawal date, with confidence 'inferred'.",
+    "Partial supersession: none in the data. Every 50.59 amendment is modelled as a full successor of the compiled text. The one genuine partial case, 61 FR 39278 adding (d) and (e) while (a)-(c) kept governing, can't be modelled because no pre-1996-08-28 version is recorded (EVALUATION 4.2 G). No license-amendment page swaps were obtainable.",
+    "Effective date BEFORE issue date (the case the spec names): no instance exists. ACCESS_REPORT says 'none found', and EVALUATION 4.2 H confirms that no row has effective_from < issue_date.",
+    "Conflict window, a fourth real pattern: the index dates the incorporation into the successor earlier than the formal withdrawal (RG 1.85: 06/2003 vs 2004-06-18; RG 1.182: 05/2012 vs 2012-11-27). Inside the window the resolver reports the authority as UNRESOLVED and the correct output is abstention (r10, r12).",
+    "Anchor (EA-98-155, April 1996): the earliest recorded 50.59 version (M1) took effect 1996-08-28, and the 1996 CFR edition is not on GovInfo, so q02 expects abstention. M1's text for (a)-(c) did govern in April 1996, but recording that needs a pre-1996 version row.",
+    "FitzPatrick MP-033.05 Rev 28 (ML22027A362): not included. The report's bytes could not be downloaded (HTTP 403), and MP-033.05 itself is not public (ACCESS_REPORT rows A, H).",
+    "FR PDFs carry first- and last-page bleed from other agencies' documents. No answer here depends on those pages: the 50.59 instructions cited are on interior pages, as given in each manifest row's notes.",
+    "Discriminating QA questions: 14 (q02-q14, q24), all about one regulation and one mechanism (point-in-time lookup). That is enough for a demonstration, not for statistically meaningful retrieval metrics (EVALUATION 4.3). In mode graph the pre-filter leaves one 50.59 version, so graph recall is close to trivially high."
+  ],
+  "retrieval": {
+    "none": {
+      "summary": {
+        "questions": 19,
+        "scored": 17,
+        "recall_at_k": 0.6470588235294118,
+        "mrr": 0.3647058823529412,
+        "superseded_chunk_rate": 0.7763157894736842,
+        "retrieved_chunks": 152
+      },
+      "rows": [
+        {
+          "id": "q01",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 3
+        },
+        {
+          "id": "q02",
+          "category": "anchor",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": null,
+          "rr": null,
+          "non_governing": 8
+        },
+        {
+          "id": "q03",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2001-03-13"
+          ],
+          "recall": 1.0,
+          "rr": 0.5,
+          "non_governing": 6
+        },
+        {
+          "id": "q14",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2001-12-14"
+          ],
+          "recall": 1.0,
+          "rr": 0.5,
+          "non_governing": 7
+        },
+        {
+          "id": "q04",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": 1.0,
+          "rr": 0.5,
+          "non_governing": 5
+        },
+        {
+          "id": "q05",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 0.16666666666666666,
+          "non_governing": 7
+        },
+        {
+          "id": "q06",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 0.2,
+          "non_governing": 7
+        },
+        {
+          "id": "q07",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2001-12-14"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 8
+        },
+        {
+          "id": "q08",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2007-09-27"
+          ],
+          "recall": 1.0,
+          "rr": 0.3333333333333333,
+          "non_governing": 7
+        },
+        {
+          "id": "q09",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2001-03-13"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 8
+        },
+        {
+          "id": "q24",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2024-08-15"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 8
+        },
+        {
+          "id": "q10",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2024-08-15"
+          ],
+          "recall": 1.0,
+          "rr": 0.5,
+          "non_governing": 6
+        },
+        {
+          "id": "q11",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2024-08-15"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 8
+        },
+        {
+          "id": "q12",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 8
+        },
+        {
+          "id": "q13",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 8
+        },
+        {
+          "id": "q15",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": 1.0,
+          "rr": 0.5,
+          "non_governing": 3
+        },
+        {
+          "id": "q16",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 4
+        },
+        {
+          "id": "q17",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2001-12-14"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 4
+        },
+        {
+          "id": "q23",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2001-03-13"
+          ],
+          "recall": null,
+          "rr": null,
+          "non_governing": 3
+        }
+      ]
+    },
+    "flag": {
+      "summary": {
+        "questions": 19,
+        "scored": 17,
+        "recall_at_k": 0.23529411764705882,
+        "mrr": 0.23529411764705882,
+        "superseded_chunk_rate": 0.7368421052631579,
+        "retrieved_chunks": 95
+      },
+      "rows": [
+        {
+          "id": "q01",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q02",
+          "category": "anchor",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": null,
+          "rr": null,
+          "non_governing": 5
+        },
+        {
+          "id": "q03",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q14",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q04",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q05",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q06",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q07",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q08",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q09",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q24",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q10",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q11",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q12",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q13",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 0.0,
+          "rr": 0.0,
+          "non_governing": 5
+        },
+        {
+          "id": "q15",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q16",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q17",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q23",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": null,
+          "rr": null,
+          "non_governing": 0
+        }
+      ]
+    },
+    "graph": {
+      "summary": {
+        "questions": 19,
+        "scored": 17,
+        "recall_at_k": 1.0,
+        "mrr": 1.0,
+        "superseded_chunk_rate": 0.0,
+        "retrieved_chunks": 117
+      },
+      "rows": [
+        {
+          "id": "q01",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q02",
+          "category": "anchor",
+          "retrieved": [],
+          "recall": null,
+          "rr": null,
+          "non_governing": 0
+        },
+        {
+          "id": "q03",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q14",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q04",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q05",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28",
+            "10CFR50.59@1996-08-28"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q06",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q07",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q08",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13",
+            "10CFR50.59@2001-03-13"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q09",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q24",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14",
+            "10CFR50.59@2001-12-14"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q10",
+          "category": "time_anchored",
+          "retrieved": [
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q11",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27",
+            "10CFR50.59@2007-09-27"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q12",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q13",
+          "category": "effective_after_issue",
+          "retrieved": [
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15",
+            "10CFR50.59@2024-08-15"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q15",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q16",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q17",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": 1.0,
+          "rr": 1.0,
+          "non_governing": 0
+        },
+        {
+          "id": "q23",
+          "category": "control",
+          "retrieved": [
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29",
+            "10CFR50.59@2025-01-29"
+          ],
+          "recall": null,
+          "rr": null,
+          "non_governing": 0
+        }
+      ]
+    }
+  },
+  "generation": {
+    "none": {
+      "summary": {
+        "questions": 19,
+        "answered": 19,
+        "timed_out": 0,
+        "answer_rate": 1.0,
+        "superseded_citation_rate": 0.47368421052631576,
+        "cites_expected_rate": 0.631578947368421
+      },
+      "rows": [
+        {
+          "id": "q01",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "EA-98-155@0 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q01/20261115T225111Z-bf0b68-answer.md"
+        },
+        {
+          "id": "q02",
+          "category": "anchor",
+          "decision": "answer",
+          "expect_abstain": true,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.2",
+            "EA-98-155@0 p.1"
+          ],
+          "model_as_of": "1996-04-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q02/20261115T225131Z-ca7478-answer.md"
+        },
+        {
+          "id": "q03",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.1"
+          ],
+          "model_as_of": "1998-05-01",
+          "as_of_mismatch": true,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q03/20261115T225146Z-b1932b-answer.md"
+        },
+        {
+          "id": "q14",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.2"
+          ],
+          "model_as_of": "1997-01-01",
+          "as_of_mismatch": true,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q14/20261115T225153Z-89f7d8-answer.md"
+        },
+        {
+          "id": "q04",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.1",
+            "10CFR50.59@2001-03-13 p.2"
+          ],
+          "model_as_of": "2000-06-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q04/20261115T225201Z-12afd1-answer.md"
+        },
+        {
+          "id": "q05",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.2"
+          ],
+          "model_as_of": "2001-01-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q05/20261115T225214Z-9d5bf2-answer.md"
+        },
+        {
+          "id": "q06",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2001-12-14 p.1"
+          ],
+          "model_as_of": "2001-04-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q06/20261115T225226Z-431ca5-answer.md"
+        },
+        {
+          "id": "q07",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.1",
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2001-07-01",
+          "as_of_mismatch": true,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q07/20261115T225238Z-957b25-answer.md"
+        },
+        {
+          "id": "q08",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2001-03-13 p.1"
+          ],
+          "model_as_of": "2001-09-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q08/20261115T225244Z-3a1aac-answer.md"
+        },
+        {
+          "id": "q09",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2001-03-13 p.1",
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2005-01-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of",
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q09/20261115T225254Z-c81658-answer.md"
+        },
+        {
+          "id": "q24",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2007-09-27 p.1"
+          ],
+          "model_as_of": "2006-01-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q24/20261115T225305Z-60371d-answer.md"
+        },
+        {
+          "id": "q10",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2007-09-27 p.1"
+          ],
+          "model_as_of": "2010-01-01",
+          "as_of_mismatch": true,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q10/20261115T225315Z-27914c-answer.md"
+        },
+        {
+          "id": "q11",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2024-08-15 p.1",
+            "10CFR50.59@2001-12-14 p.1"
+          ],
+          "model_as_of": "2024-08-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of",
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q11/20261115T225323Z-045b61-answer.md"
+        },
+        {
+          "id": "q12",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2024-08-15 p.1"
+          ],
+          "model_as_of": "2024-09-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q12/20261115T225329Z-c6b02c-answer.md"
+        },
+        {
+          "id": "q13",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2025-01-15",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q13/20261115T225340Z-e05e27-answer.md"
+        },
+        {
+          "id": "q15",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q15/20261115T225353Z-e23366-answer.md"
+        },
+        {
+          "id": "q16",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q16/20261115T225408Z-1edbfd-answer.md"
+        },
+        {
+          "id": "q17",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2001-03-13 p.2"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [
+            "superseded"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q17/20261115T225424Z-928001-answer.md"
+        },
+        {
+          "id": "q23",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "EA-98-155@0 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [
+            "no_requirement_citation"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q23/20261115T225437Z-89c285-answer.md"
+        }
+      ]
+    },
+    "flag": {
+      "summary": {
+        "questions": 19,
+        "answered": 19,
+        "timed_out": 0,
+        "answer_rate": 1.0,
+        "superseded_citation_rate": 0.6842105263157895,
+        "cites_expected_rate": 0.2631578947368421
+      },
+      "rows": [
+        {
+          "id": "q01",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "EA-98-155@0 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q01/20261115T225504Z-1c4a22-answer.md"
+        },
+        {
+          "id": "q02",
+          "category": "anchor",
+          "decision": "answer",
+          "expect_abstain": true,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "EA-98-155@0 p.1"
+          ],
+          "model_as_of": "1996-04-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q02/20261115T225519Z-295113-answer.md"
+        },
+        {
+          "id": "q03",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": false,
+          "citations": [
+            "FR-64-53582@0 p.2"
+          ],
+          "model_as_of": "1998-05-01",
+          "as_of_mismatch": true,
+          "violations": [
+            "no_requirement_citation"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q03/20261115T225533Z-f70f6d-answer.md"
+        },
+        {
+          "id": "q14",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "1997-01-01",
+          "as_of_mismatch": true,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q14/20261115T225544Z-578526-answer.md"
+        },
+        {
+          "id": "q04",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2000-06-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q04/20261115T225555Z-0b3416-answer.md"
+        },
+        {
+          "id": "q05",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2001-01-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q05/20261115T225604Z-32610d-answer.md"
+        },
+        {
+          "id": "q06",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2001-04-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q06/20261115T225616Z-5ea6b6-answer.md"
+        },
+        {
+          "id": "q07",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2001-07-01",
+          "as_of_mismatch": true,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q07/20261115T225624Z-6e7246-answer.md"
+        },
+        {
+          "id": "q08",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2001-09-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q08/20261115T225633Z-e93748-answer.md"
+        },
+        {
+          "id": "q09",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2005-01-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q09/20261115T225642Z-cdfb74-answer.md"
+        },
+        {
+          "id": "q24",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2006-01-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q24/20261115T225650Z-d69f61-answer.md"
+        },
+        {
+          "id": "q10",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2010-01-01",
+          "as_of_mismatch": true,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q10/20261115T225700Z-0042d1-answer.md"
+        },
+        {
+          "id": "q11",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2024-08-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q11/20261115T225708Z-0a1f7e-answer.md"
+        },
+        {
+          "id": "q12",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2024-09-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q12/20261115T225717Z-36fb96-answer.md"
+        },
+        {
+          "id": "q13",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": true,
+          "cites_expected": false,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2025-01-15",
+          "as_of_mismatch": false,
+          "violations": [
+            "not_governing_on_as_of"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q13/20261115T225726Z-f72fb4-answer.md"
+        },
+        {
+          "id": "q15",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q15/20261115T225740Z-e8b73a-answer.md"
+        },
+        {
+          "id": "q16",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q16/20261115T225754Z-87d5c9-answer.md"
+        },
+        {
+          "id": "q17",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q17/20261115T225802Z-480cec-answer.md"
+        },
+        {
+          "id": "q23",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "EA-98-155@0 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [
+            "no_requirement_citation"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q23/20261115T225813Z-faa0ff-answer.md"
+        }
+      ]
+    },
+    "graph": {
+      "summary": {
+        "questions": 19,
+        "answered": 17,
+        "timed_out": 0,
+        "answer_rate": 0.8947368421052632,
+        "superseded_citation_rate": 0.0,
+        "cites_expected_rate": 1.0
+      },
+      "rows": [
+        {
+          "id": "q01",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "EA-98-155@0 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q01/20261115T225842Z-9474a2-answer.md"
+        },
+        {
+          "id": "q02",
+          "category": "anchor",
+          "decision": "abstain",
+          "expect_abstain": true,
+          "superseded": false,
+          "cites_expected": false,
+          "citations": [],
+          "model_as_of": "1996-04-01",
+          "as_of_mismatch": false,
+          "violations": [
+            "no_governing_requirement",
+            "no_requirement_citation"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q02/20261115T225855Z-4a0076-abstain.md"
+        },
+        {
+          "id": "q03",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.1",
+            "10CFR50.59@1996-08-28 p.2"
+          ],
+          "model_as_of": "1998-05-01",
+          "as_of_mismatch": true,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q03/20261115T225913Z-83a823-answer.md"
+        },
+        {
+          "id": "q14",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.2"
+          ],
+          "model_as_of": "1997-01-01",
+          "as_of_mismatch": true,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q14/20261115T225922Z-a45fe1-answer.md"
+        },
+        {
+          "id": "q04",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.1"
+          ],
+          "model_as_of": "2000-06-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q04/20261115T225930Z-dfd37c-answer.md"
+        },
+        {
+          "id": "q05",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@1996-08-28 p.2"
+          ],
+          "model_as_of": "2001-01-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q05/20261115T225940Z-6c42ce-answer.md"
+        },
+        {
+          "id": "q06",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2001-03-13 p.1",
+            "10CFR50.59@2001-03-13 p.2"
+          ],
+          "model_as_of": "2001-04-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q06/20261115T225955Z-0ca1e3-answer.md"
+        },
+        {
+          "id": "q07",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2001-03-13 p.1"
+          ],
+          "model_as_of": "2001-07-01",
+          "as_of_mismatch": true,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q07/20261115T230002Z-bba341-answer.md"
+        },
+        {
+          "id": "q08",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2001-03-13 p.1"
+          ],
+          "model_as_of": "2001-09-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q08/20261115T230008Z-5b16a6-answer.md"
+        },
+        {
+          "id": "q09",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2001-12-14 p.1"
+          ],
+          "model_as_of": "2005-01-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q09/20261115T230015Z-7ca638-answer.md"
+        },
+        {
+          "id": "q24",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2001-12-14 p.1"
+          ],
+          "model_as_of": "2006-01-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q24/20261115T230026Z-9649a0-answer.md"
+        },
+        {
+          "id": "q10",
+          "category": "time_anchored",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2007-09-27 p.1"
+          ],
+          "model_as_of": "2010-01-01",
+          "as_of_mismatch": true,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q10/20261115T230036Z-ee9417-answer.md"
+        },
+        {
+          "id": "q11",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2007-09-27 p.1"
+          ],
+          "model_as_of": "2024-08-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q11/20261115T230044Z-41573a-answer.md"
+        },
+        {
+          "id": "q12",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2024-08-15 p.1"
+          ],
+          "model_as_of": "2024-09-01",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q12/20261115T230051Z-4aed3d-answer.md"
+        },
+        {
+          "id": "q13",
+          "category": "effective_after_issue",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2024-08-15 p.1"
+          ],
+          "model_as_of": "2025-01-15",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q13/20261115T230110Z-839063-answer.md"
+        },
+        {
+          "id": "q15",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q15/20261115T230121Z-774818-answer.md"
+        },
+        {
+          "id": "q16",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q16/20261115T230133Z-0a4c30-answer.md"
+        },
+        {
+          "id": "q17",
+          "category": "control",
+          "decision": "answer",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": true,
+          "citations": [
+            "10CFR50.59@2025-01-29 p.1"
+          ],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q17/20261115T230141Z-98a62d-answer.md"
+        },
+        {
+          "id": "q23",
+          "category": "control",
+          "decision": "abstain",
+          "expect_abstain": false,
+          "superseded": false,
+          "cites_expected": false,
+          "citations": [],
+          "model_as_of": "2026-11-14",
+          "as_of_mismatch": false,
+          "violations": [
+            "no_requirement_citation"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q23/20261115T230155Z-20d2a4-abstain.md"
+        }
+      ]
+    }
+  },
+  "resolver": {
+    "summary": {
+      "questions": 13,
+      "graph_correct": 13,
+      "flag_correct": 1
+    },
+    "rows": [
+      {
+        "id": "r01",
+        "category": "control",
+        "doc_id": "RG-1.187",
+        "as_of": "2026-11-14",
+        "expected": [
+          "RG-1.187@3"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.187@3"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [
+          "RG-1.187@3"
+        ],
+        "flag_correct": true
+      },
+      {
+        "id": "r02",
+        "category": "time_anchored",
+        "doc_id": "RG-1.187",
+        "as_of": "2019-12-01",
+        "expected": [
+          "RG-1.187@1"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.187@1"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [
+          "RG-1.187@3"
+        ],
+        "flag_correct": false
+      },
+      {
+        "id": "r03",
+        "category": "effective_after_issue",
+        "doc_id": "RG-1.187",
+        "as_of": "2020-06-15",
+        "expected": [
+          "RG-1.187@1"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.187@1"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [
+          "RG-1.187@3"
+        ],
+        "flag_correct": false
+      },
+      {
+        "id": "r04",
+        "category": "time_anchored",
+        "doc_id": "RG-1.187",
+        "as_of": "2020-08-01",
+        "expected": [
+          "RG-1.187@2"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.187@2"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [
+          "RG-1.187@3"
+        ],
+        "flag_correct": false
+      },
+      {
+        "id": "r05",
+        "category": "cross_family",
+        "doc_id": "RG-1.1",
+        "as_of": "2016-01-01",
+        "expected": [
+          "RG-1.82@4"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.82@4"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r06",
+        "category": "cross_family",
+        "doc_id": "RG-1.1",
+        "as_of": "2026-11-14",
+        "expected": [
+          "RG-1.82@5"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.82@5"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r07",
+        "category": "time_anchored",
+        "doc_id": "RG-1.3",
+        "as_of": "2016-06-01",
+        "expected": [
+          "RG-1.3@2"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.3@2"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r08",
+        "category": "cross_family",
+        "doc_id": "RG-1.3",
+        "as_of": "2017-01-01",
+        "expected": [
+          "RG-1.183@0",
+          "RG-1.195@0"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.183@0",
+          "RG-1.195@0"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r09",
+        "category": "cross_family",
+        "doc_id": "RG-1.95",
+        "as_of": "2003-01-01",
+        "expected": [
+          "RG-1.78@1"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.78@1"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r10",
+        "category": "conflict_window",
+        "doc_id": "RG-1.85",
+        "as_of": "2003-09-01",
+        "expected": [],
+        "expect_resolved": false,
+        "graph": [
+          "RG-1.84@32"
+        ],
+        "graph_resolved": false,
+        "graph_correct": true,
+        "unresolved": [
+          "RG-1.85 Rev 31 --withdrawn--> RG-1.85 Rev 31 (effective 2004-06-18, explicit)",
+          "RG-1.84 Rev 32 --cross_family--> RG-1.85 Rev 31 (effective 2004-06-18, explicit)"
+        ],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r11",
+        "category": "cross_family",
+        "doc_id": "RG-1.85",
+        "as_of": "2004-07-01",
+        "expected": [
+          "RG-1.84@32"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.84@32"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r12",
+        "category": "conflict_window",
+        "doc_id": "RG-1.182",
+        "as_of": "2012-08-01",
+        "expected": [],
+        "expect_resolved": false,
+        "graph": [
+          "RG-1.160@3"
+        ],
+        "graph_resolved": false,
+        "graph_correct": true,
+        "unresolved": [
+          "RG-1.182 Rev 0 --withdrawn--> RG-1.182 Rev 0 (effective 2012-11-27, explicit)",
+          "RG-1.160 Rev 3 --cross_family--> RG-1.182 Rev 0 (effective 2012-11-27, explicit)",
+          "RG-1.160 Rev 3 --cross_family--> RG-1.182 Rev 0 (effective 2012-11-27, inferred)"
+        ],
+        "flag": [],
+        "flag_correct": false
+      },
+      {
+        "id": "r13",
+        "category": "cross_family",
+        "doc_id": "RG-1.182",
+        "as_of": "2013-01-01",
+        "expected": [
+          "RG-1.160@3"
+        ],
+        "expect_resolved": true,
+        "graph": [
+          "RG-1.160@3"
+        ],
+        "graph_resolved": true,
+        "graph_correct": true,
+        "unresolved": [],
+        "flag": [],
+        "flag_correct": false
+      }
+    ]
+  },
+  "failure_cases": [
+    {
+      "id": "r02",
+      "category": "time_anchored",
+      "level": "resolver",
+      "flag": "status column says ['RG-1.187@3']",
+      "graph": "['RG-1.187@1']"
+    },
+    {
+      "id": "r03",
+      "category": "effective_after_issue",
+      "level": "resolver",
+      "flag": "status column says ['RG-1.187@3']",
+      "graph": "['RG-1.187@1']"
+    },
+    {
+      "id": "r04",
+      "category": "time_anchored",
+      "level": "resolver",
+      "flag": "status column says ['RG-1.187@3']",
+      "graph": "['RG-1.187@2']"
+    },
+    {
+      "id": "r05",
+      "category": "cross_family",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "['RG-1.82@4']"
+    },
+    {
+      "id": "r06",
+      "category": "cross_family",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "['RG-1.82@5']"
+    },
+    {
+      "id": "r07",
+      "category": "time_anchored",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "['RG-1.3@2']"
+    },
+    {
+      "id": "r08",
+      "category": "cross_family",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "['RG-1.183@0', 'RG-1.195@0']"
+    },
+    {
+      "id": "r09",
+      "category": "cross_family",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "['RG-1.78@1']"
+    },
+    {
+      "id": "r10",
+      "category": "conflict_window",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "unresolved (abstains)"
+    },
+    {
+      "id": "r11",
+      "category": "cross_family",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "['RG-1.84@32']"
+    },
+    {
+      "id": "r12",
+      "category": "conflict_window",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "unresolved (abstains)"
+    },
+    {
+      "id": "r13",
+      "category": "cross_family",
+      "level": "resolver",
+      "flag": "status column says nothing active",
+      "graph": "['RG-1.160@3']"
+    },
+    {
+      "id": "q03",
+      "category": "time_anchored",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q14",
+      "category": "time_anchored",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q04",
+      "category": "effective_after_issue",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q05",
+      "category": "effective_after_issue",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q06",
+      "category": "effective_after_issue",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q07",
+      "category": "time_anchored",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q08",
+      "category": "time_anchored",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q09",
+      "category": "time_anchored",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q24",
+      "category": "time_anchored",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q10",
+      "category": "time_anchored",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q11",
+      "category": "effective_after_issue",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q12",
+      "category": "effective_after_issue",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q13",
+      "category": "effective_after_issue",
+      "level": "retrieval",
+      "flag": "recall 0.00, 5 non-governing chunks",
+      "graph": "recall 1.00, 0 non-governing chunks"
+    },
+    {
+      "id": "q02",
+      "category": "anchor",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1', 'EA-98-155@0 p.1']",
+      "graph": "abstain, cited nothing"
+    },
+    {
+      "id": "q03",
+      "category": "time_anchored",
+      "level": "generation",
+      "flag": "answer, cited ['FR-64-53582@0 p.2']",
+      "graph": "answer, cited ['10CFR50.59@1996-08-28 p.1', '10CFR50.59@1996-08-28 p.2']"
+    },
+    {
+      "id": "q14",
+      "category": "time_anchored",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@1996-08-28 p.2']"
+    },
+    {
+      "id": "q04",
+      "category": "effective_after_issue",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@1996-08-28 p.1']"
+    },
+    {
+      "id": "q05",
+      "category": "effective_after_issue",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@1996-08-28 p.2']"
+    },
+    {
+      "id": "q06",
+      "category": "effective_after_issue",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2001-03-13 p.1', '10CFR50.59@2001-03-13 p.2']"
+    },
+    {
+      "id": "q07",
+      "category": "time_anchored",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2001-03-13 p.1']"
+    },
+    {
+      "id": "q08",
+      "category": "time_anchored",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2001-03-13 p.1']"
+    },
+    {
+      "id": "q09",
+      "category": "time_anchored",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2001-12-14 p.1']"
+    },
+    {
+      "id": "q24",
+      "category": "time_anchored",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2001-12-14 p.1']"
+    },
+    {
+      "id": "q10",
+      "category": "time_anchored",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2007-09-27 p.1']"
+    },
+    {
+      "id": "q11",
+      "category": "effective_after_issue",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2007-09-27 p.1']"
+    },
+    {
+      "id": "q12",
+      "category": "effective_after_issue",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2024-08-15 p.1']"
+    },
+    {
+      "id": "q13",
+      "category": "effective_after_issue",
+      "level": "generation",
+      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
+      "graph": "answer, cited ['10CFR50.59@2024-08-15 p.1']"
+    }
+  ]
+}
