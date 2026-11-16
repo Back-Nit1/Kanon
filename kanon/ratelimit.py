@@ -85,10 +85,17 @@ _LIMITER: SlidingWindow | None = None
 _LOADED = False
 
 # A full three-mode eval is ~615 chat calls + ~600 query embeddings, so the default budget stops
-# a second accidental full run rather than a legitimate first one. Pacing defaults are generous:
-# they exist to catch a loop, not to slow a normal run (which peaks near 25 requests/minute).
-DEFAULT_PER_MINUTE = 60
+# a second accidental full run rather than a legitimate first one.
 DEFAULT_BUDGET = 1500
+
+# Pacing exists to catch a runaway loop, not to slow a healthy run, and the headroom has to be
+# real: measured on this harness, the retrieval phase peaks at 57 requests/minute (one query
+# embedding per search, back to back), while a runaway tool loop would be in the thousands. An
+# earlier 60/minute default sat directly on that peak, so the limiter began sleeping mid-question
+# — and **a wait inside `acquire` counts against the per-question deadline**
+# (`kanon-eval --question-timeout`, enforced by SIGALRM around the whole question), which turned
+# pacing into a spurious TIMED OUT row. Lower this only together with a longer question timeout.
+DEFAULT_PER_MINUTE = 300
 
 
 def limiter() -> SlidingWindow | None:

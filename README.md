@@ -74,9 +74,12 @@ when ingest is a service with concurrent producers, not a command someone runs.
 
 Every paid request goes through `kanon/llm.py`, so both guards live there (`kanon/ratelimit.py`).
 
-- **Sliding window** (`KANON_MAX_REQUESTS_PER_MIN`, default 60): at most that many requests in any
-  trailing 60 s, chat and embeddings sharing one counter. Paces a run and stops a runaway agent
-  loop. Rejected `langchain_core.rate_limiters.InMemoryRateLimiter`, which ships with the stack
+- **Sliding window** (`KANON_MAX_REQUESTS_PER_MIN`, default 300): at most that many requests in
+  any trailing 60 s, chat and embeddings sharing one counter. It is there to catch a runaway tool
+  loop, which would run in the thousands per minute; the measured peak of a healthy run is 57, in
+  the retrieval phase. A wait inside the limiter counts against `--question-timeout`, so lowering
+  this needs a longer timeout with it — a 60/minute default sat on that peak and produced a
+  spurious timed-out question. Rejected `langchain_core.rate_limiters.InMemoryRateLimiter`, which ships with the stack
   and is free: it is a token bucket, so a refilled bucket bursts past the limit a provider counts
   over a window. The sliding window's cost is one timestamp per in-window request.
 - **Request budget** (`KANON_MAX_REQUESTS`, default 1500): a hard cap for one process. The run

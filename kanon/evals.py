@@ -485,7 +485,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--question-timeout", type=float,
                    default=float(os.environ.get("KANON_QUESTION_TIMEOUT", 60)),
                    help="seconds allowed per question per mode (0 = no limit); "
-                        "a timed-out question is recorded, reported, and the run moves on")
+                        "a timed-out question is recorded, reported, and the run moves on. "
+                        "Time spent waiting on the rate limiter counts against it, so lower "
+                        "KANON_MAX_REQUESTS_PER_MIN only together with a longer timeout")
     args = p.parse_args(argv)
 
     from kanon.config import load_settings
