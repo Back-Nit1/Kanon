@@ -1,19 +1,19 @@
 # Kanon evaluation report
 
-- Question set: `/Users/nityanthmaramreddy/gord-demo/evals/questions.yaml` (sha256 `f8b0c41b4302`), 32 questions (19 qa, 13 resolver), pinned today = 2026-11-14, k = 8
+- Question set: `/Users/nityanthmaramreddy/gord-demo/evals/questions.yaml` (sha256 `c82c87413cc6`), 32 questions (19 qa, 13 resolver), pinned today = 2026-11-14, k = 8
 - Categories: anchor (1), conflict_window (2), control (6), cross_family (6), effective_after_issue (7), time_anchored (10)
 
 ## Primary metric (generation): superseded-citation rate, paired with answer rate
 
 | mode | superseded-citation rate | answer rate | answered | cites an expected doc (of answered) |
 |---|---|---|---|---|
-| none | 47% | 100% | 19/19 | 63% |
-| flag | 68% | 100% | 19/19 | 26% |
-| graph | 0% | 89% | 17/19 | 100% |
+| none | 47% | 100% | 19/19 | 58% |
+| flag | 63% | 100% | 19/19 | 32% |
+| graph | 0% | 95% | 18/19 | 100% |
 
 - `none`: superseded-citation rate 47% @ answer rate 100% (19/19 answered)
-- `flag`: superseded-citation rate 68% @ answer rate 100% (19/19 answered)
-- `graph`: superseded-citation rate 0% @ answer rate 89% (17/19 answered)
+- `flag`: superseded-citation rate 63% @ answer rate 100% (19/19 answered)
+- `graph`: superseded-citation rate 0% @ answer rate 95% (18/19 answered)
 
 ## Retrieval (no LLM)
 
@@ -86,8 +86,7 @@ Other categories (`flag` only knows what is active today, so any past as_of can 
 - q09 (time_anchored, retrieval) — flag: recall 0.00, 5 non-governing chunks; graph: recall 1.00, 0 non-governing chunks
 - q24 (time_anchored, retrieval) — flag: recall 0.00, 5 non-governing chunks; graph: recall 1.00, 0 non-governing chunks
 - q10 (time_anchored, retrieval) — flag: recall 0.00, 5 non-governing chunks; graph: recall 1.00, 0 non-governing chunks
-- q02 (anchor, generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1', 'EA-98-155@0 p.1']; graph: abstain, cited nothing
-- q03 (time_anchored, generation) — flag: answer, cited ['FR-64-53582@0 p.2']; graph: answer, cited ['10CFR50.59@1996-08-28 p.1', '10CFR50.59@1996-08-28 p.2']
+- q02 (anchor, generation) — flag: answer, cited ['EA-98-155@0 p.1']; graph: abstain, cited nothing
 - q14 (time_anchored, generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@1996-08-28 p.2']
 - q07 (time_anchored, generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@2001-03-13 p.1']
 - q08 (time_anchored, generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@2001-03-13 p.1']
@@ -103,7 +102,7 @@ Other categories (`flag` only knows what is active today, so any past as_of can 
 - Effective date BEFORE issue date (the case the spec names): no instance exists. ACCESS_REPORT says 'none found', and EVALUATION 4.2 H confirms that no row has effective_from < issue_date.
 - Conflict window, a fourth real pattern: the index dates the incorporation into the successor earlier than the formal withdrawal (RG 1.85: 06/2003 vs 2004-06-18; RG 1.182: 05/2012 vs 2012-11-27). Inside the window the resolver reports the authority as UNRESOLVED and the correct output is abstention (r10, r12).
 - Anchor (EA-98-155, April 1996): the earliest recorded 50.59 version (M1) took effect 1996-08-28, and the 1996 CFR edition is not on GovInfo, so q02 expects abstention. M1's text for (a)-(c) did govern in April 1996, but recording that needs a pre-1996 version row.
-- FitzPatrick MP-033.05 Rev 28 (ML22027A362): not included. The report's bytes could not be downloaded (HTTP 403), and MP-033.05 itself is not public (ACCESS_REPORT rows A, H).
+- FitzPatrick inspection report ML22027A362 is in the manifest (Internet Archive capture; nrc.gov returned 403, see its notes field). The procedure it names, MP-033.05 Rev 28, is not public and is not in the corpus (ACCESS_REPORT rows A, H).
 - FR PDFs carry first- and last-page bleed from other agencies' documents. No answer here depends on those pages: the 50.59 instructions cited are on interior pages, as given in each manifest row's notes.
 - Discriminating QA questions: 14 (q02-q14, q24), all about one regulation and one mechanism (point-in-time lookup). That is enough for a demonstration, not for statistically meaningful retrieval metrics (EVALUATION 4.3). In mode graph the pre-filter leaves one 50.59 version, so graph recall is close to trivially high.
 

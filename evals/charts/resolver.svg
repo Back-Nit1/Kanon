@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 230" role="img" aria-label="Resolver, store level (13 questions): who knows what governed"><style>
+:root{--bg:#fcfcfb;--t1:#0b0b0b;--t2:#52514e;--grid:#e4e3df;--none:#2a78d6;--flag:#eb6834;--graph:#1baf7a}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1a19;--t1:#f0efec;--t2:#c3c2b7;--grid:#34332f;--none:#3987e5;--flag:#d95926;--graph:#199e70}}
+text{font:12px system-ui,sans-serif;fill:var(--t2)} .t{font-weight:600;font-size:14px;fill:var(--t1)} .v{fill:var(--t1);font-weight:600}
+</style><rect width="600" height="230" fill="var(--bg)"/><text class="t" x="20" y="22">Resolver, store level (13 questions): who knows what governed</text><text class="t" x="20" y="46">Correct</text><text x="20" y="64">none has no authority data (n/a)</text>
+<line x1="20" x2="270" y1="190" y2="190" stroke="var(--grid)"/>
+<text class="v" x="56" y="184" text-anchor="middle">n/a</text>
+<text x="56" y="208" text-anchor="middle">none</text>
+<path d="M112,190 V187.23076923076923 Q112,183.23076923076923 116,183.23076923076923 H156 Q160,183.23076923076923 160,187.23076923076923 V190 Z" fill="var(--flag)"/>
+<text class="v" x="136" y="177.23076923076923" text-anchor="middle">1/13</text>
+<text x="136" y="208" text-anchor="middle">flag</text>
+<path d="M192,190 V106.0 Q192,102.0 196,102.0 H236 Q240,102.0 240,106.0 V190 Z" fill="var(--graph)"/>
+<text class="v" x="216" y="96.0" text-anchor="middle">13/13</text>
+<text x="216" y="208" text-anchor="middle">graph</text><text class="t" x="320" y="46">Wrong or unresolved</text><text x="320" y="64">flag answers from today's status only</text>
+<line x1="320" x2="570" y1="190" y2="190" stroke="var(--grid)"/>
+<text class="v" x="356" y="184" text-anchor="middle">n/a</text>
+<text x="356" y="208" text-anchor="middle">none</text>
+<path d="M412,190 V112.76923076923077 Q412,108.76923076923077 416,108.76923076923077 H456 Q460,108.76923076923077 460,112.76923076923077 V190 Z" fill="var(--flag)"/>
+<text class="v" x="436" y="102.76923076923077" text-anchor="middle">12/13</text>
+<text x="436" y="208" text-anchor="middle">flag</text>
+<text class="v" x="516" y="184.0" text-anchor="middle">0/13</text>
+<text x="516" y="208" text-anchor="middle">graph</text></svg>

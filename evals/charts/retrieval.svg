@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 230" role="img" aria-label="Retrieval, no LLM: recall@8 vs superseded chunks retrieved"><style>
+:root{--bg:#fcfcfb;--t1:#0b0b0b;--t2:#52514e;--grid:#e4e3df;--none:#2a78d6;--flag:#eb6834;--graph:#1baf7a}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1a19;--t1:#f0efec;--t2:#c3c2b7;--grid:#34332f;--none:#3987e5;--flag:#d95926;--graph:#199e70}}
+text{font:12px system-ui,sans-serif;fill:var(--t2)} .t{font-weight:600;font-size:14px;fill:var(--t1)} .v{fill:var(--t1);font-weight:600}
+</style><rect width="600" height="230" fill="var(--bg)"/><text class="t" x="20" y="22">Retrieval, no LLM: recall@8 vs superseded chunks retrieved</text><text class="t" x="20" y="46">Recall@8</text><text x="20" y="64">higher is better</text>
+<line x1="20" x2="270" y1="190" y2="190" stroke="var(--grid)"/>
+<path d="M32,190 V137.05882352941177 Q32,133.05882352941177 36,133.05882352941177 H76 Q80,133.05882352941177 80,137.05882352941177 V190 Z" fill="var(--none)"/>
+<text class="v" x="56" y="127.05882352941177" text-anchor="middle">0.65</text>
+<text x="56" y="208" text-anchor="middle">none</text>
+<path d="M112,190 V173.2941176470588 Q112,169.2941176470588 116,169.2941176470588 H156 Q160,169.2941176470588 160,173.2941176470588 V190 Z" fill="var(--flag)"/>
+<text class="v" x="136" y="163.2941176470588" text-anchor="middle">0.24</text>
+<text x="136" y="208" text-anchor="middle">flag</text>
+<path d="M192,190 V106.0 Q192,102.0 196,102.0 H236 Q240,102.0 240,106.0 V190 Z" fill="var(--graph)"/>
+<text class="v" x="216" y="96.0" text-anchor="middle">1.00</text>
+<text x="216" y="208" text-anchor="middle">graph</text><text class="t" x="320" y="46">Superseded-chunk rate</text><text x="320" y="64">lower is better</text>
+<line x1="320" x2="570" y1="190" y2="190" stroke="var(--grid)"/>
+<path d="M332,190 V125.6842105263158 Q332,121.6842105263158 336,121.6842105263158 H376 Q380,121.6842105263158 380,125.6842105263158 V190 Z" fill="var(--none)"/>
+<text class="v" x="356" y="115.6842105263158" text-anchor="middle">78%</text>
+<text x="356" y="208" text-anchor="middle">none</text>
+<path d="M412,190 V129.1578947368421 Q412,125.15789473684211 416,125.15789473684211 H456 Q460,125.15789473684211 460,129.1578947368421 V190 Z" fill="var(--flag)"/>
+<text class="v" x="436" y="119.15789473684211" text-anchor="middle">74%</text>
+<text x="436" y="208" text-anchor="middle">flag</text>
+<text class="v" x="516" y="184.0" text-anchor="middle">0%</text>
+<text x="516" y="208" text-anchor="middle">graph</text></svg>
