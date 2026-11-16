@@ -32,6 +32,16 @@ _DESIGNATOR = re.compile(r"^[ \t]*(?:-[ \t]+)?((?:\([A-Za-z0-9]+\))+)[ \t]*(.*)$
 _ROMAN = re.compile(r"[ivx]+")
 
 
+# Fail-closed parse of a model-written Citation.section: optional "§", optional "50.59"-style
+# section number, then ONLY parenthesised groups. Anything else (prose, "a.2", trailing text) is None.
+_SECTION_LABEL = re.compile(r"^\s*(?:§\s*)?(?:\d+\.\d+[a-z]?)?((?:\([A-Za-z0-9]+\))+)\s*$")
+
+
+def designator_from_section(section: str | None) -> str | None:
+    m = _SECTION_LABEL.match(section or "")
+    return m.group(1) if m else None
+
+
 def section_region(text: str, section: str = "50.59") -> str:
     heads = list(_HEADING.finditer(text))
     spans = []

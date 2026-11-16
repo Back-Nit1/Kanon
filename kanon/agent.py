@@ -26,6 +26,7 @@ unscoped call to slip in, and the trace gets harder to read. ponytail: add a bou
 import json
 import operator
 import re
+from collections.abc import Callable
 from datetime import date
 from typing import Annotated, Literal, TypedDict
 
@@ -36,6 +37,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
+from kanon.diff import Paragraph, designator_from_section, paragraphs
 from kanon.ingest import Chunk
 from kanon.retrieval import CorpusIndex, Mode, is_record
 from kanon.store import AuthorityStore
@@ -163,7 +165,8 @@ def _question_controls(question: str, qc: QueryClass) -> dict:
 
 
 def check_citations(store: AuthorityStore, citations: list[Citation], retrieved: list[Chunk],
-                    as_of: date, query_kind: str) -> list[Violation]:
+                    as_of: date, query_kind: str, *,
+                    paragraphs: Callable[[str, str], dict[str, Paragraph]] | None = None) -> list[Violation]:
     """Tier B gate. Pure function, no model: every check is a lookup against recorded metadata."""
     if not citations:
         return [Violation(rule="uncited", detail="answer cites nothing; it cannot be traced")]
@@ -180,6 +183,14 @@ def check_citations(store: AuthorityStore, citations: list[Citation], retrieved:
                                  "for this query; citation is not grounded in the trace", **v))
         if is_record(doc.kind):
             continue   # records are exempt from the governing check (see retrieval.RECORD_KINDS)
+        # Integrity rule (NOT in AUTHORITY_RULES): a paragraph absent from the cited revision's own
+        # text is ungrounded in every mode. Unparseable sections yield None and never fire.
+        if paragraphs is not None and (key := designator_from_section(cit.section)):
+            have = paragraphs(cit.doc_id, cit.revision)
+            if key not in have:
+                out.append(Violation(rule="paragraph_not_in_revision", detail=(
+                    f"{key} does not exist in {cit.doc_id} revision {cit.revision}; that revision "
+                    f"has: {', '.join(list(have)[:8]) or 'no extracted paragraphs'}"), **v))
         if not store.governs(cit.doc_id, cit.revision, as_of):
             ending = [f"{e.describe()} — “{e.evidence[:160]}”"
                       for e in store.edges_into(cit.doc_id, cit.revision)
@@ -302,9 +313,16 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
         return {"draft": d.answer, "citations": d.citations}
 
     def validate(state: AgentState, config: RunnableConfig) -> dict:
+        cache: dict[tuple[str, str], dict[str, Paragraph]] = {}   # per run: one read per revision
+
+        def revision_paragraphs(doc_id: str, revision: str) -> dict[str, Paragraph]:
+            if (doc_id, revision) not in cache:
+                cache[doc_id, revision] = paragraphs(index.chunks_for(f"{doc_id}@{revision}"))
+            return cache[doc_id, revision]
+
         new = ([] if not state.get("draft") else
                check_citations(store, state["citations"], state["chunks"], state["as_of"],
-                               state["query_kind"]))
+                               state["query_kind"], paragraphs=revision_paragraphs))
         if state.get("draft") and state["needs_requirements"]:
             cited_docs = [store.get(c.doc_id, c.revision) for c in state["citations"]]
             if cited_docs and all(doc is None or is_record(doc.kind) for doc in cited_docs):

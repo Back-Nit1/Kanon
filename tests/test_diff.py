@@ -4,8 +4,8 @@ from datetime import date
 
 import pytest
 
-from kanon.diff import (DiffResult, Paragraph, diff_as_of, diff_paragraphs, format_diff,
-                        normalize, paragraphs, section_region)
+from kanon.diff import (DiffResult, Paragraph, designator_from_section, diff_as_of, diff_paragraphs,
+                        format_diff, normalize, paragraphs, section_region)
 from kanon.ingest import Chunk
 from kanon.store import AuthorityStore, DocumentVersion, Edge
 
@@ -234,3 +234,20 @@ def test_format_diff_labels_every_line_with_revision_and_page():
     text = format_diff(r)
     assert "GONE" in text and "(a)(2)" in text and "1996-08-28" in text and "p.1" in text
     assert "requirement" in text
+
+
+def test_designator_from_section_handles_model_phrasings():
+    assert designator_from_section("§ 50.59(a)(2)") == "(a)(2)"
+    assert designator_from_section("50.59(a)(2)") == "(a)(2)"
+    assert designator_from_section("(a)(2)") == "(a)(2)"
+    assert designator_from_section("50.59(c)(2)(i)") == "(c)(2)(i)"
+
+
+def test_designator_from_section_fails_closed():
+    for bad in [None, "", "a.2", "Changes, tests, and experiments", "§ 50.59", "50.59"]:
+        assert designator_from_section(bad) is None
+
+
+def test_designator_from_section_rejects_trailing_or_embedded_text():
+    for bad in ["§ 50.59(a)(2) and (b)", "see (a)(2)", "50.59(a)(2) text", "(a)(2", "()", "50.59 (a)"]:
+        assert designator_from_section(bad) is None
