@@ -18,6 +18,7 @@ Operational verification and security notes: [VERIFICATION.md](VERIFICATION.md) 
 | 1     | `kanon/supersession.py`                  | Verbatim supersession text → typed edges (regex, no LLM)                       |
 | 2     | `kanon/ingest.py`                        | Docling parse → page-anchored chunks with full metadata                        |
 | 2     | `kanon/queue.py`                         | Postgres queue, resumable workers, lifecycle audit, DLQ + chunk sidecar        |
+| 2     | `kanon/diff.py`                          | Deterministic CFR paragraph diff between two as-of dates (`kanon diff`)        |
 | 2     | `kanon/retrieval.py`                     | Hot/cold Chroma + BM25, RRF fusion, modes `none`/`flag`/`graph`                |
 | 3     | `kanon/tools.py`                         | Typed tools; `as_of` required; no unscoped search tool                         |
 | 3     | `kanon/agent.py`                         | LangGraph agent with the Tier B gate as a blocking node                        |
@@ -55,6 +56,7 @@ uv run kanon worker                # optional additional SKIP LOCKED worker
 uv run kanon dlq                   # failed files, attempts, causes, source URLs
 uv run kanon dlq --failing         # revisions ranked by accumulated failures
 uv run kanon resolve 10CFR50.59 --as-of 2000-06-01
+uv run kanon diff 10CFR50.59 --from 2000-06-01 --to 2026-11-15   # paragraph-level diff of what governed on each date
 uv run kanon ask "An engineer wants to replace a primary coolant pump..." --mode graph
 uv run kanon-dashboard             # localhost:8791, where an eval spends its time (reads traces/timing.jsonl)
 uv run kanon-eval                  # all three modes; --retrieval-only needs no chat model
@@ -70,6 +72,12 @@ configured retries so transient downloads and parser failures follow one review 
 
 ## Known limitations
 
+- **Diff granularity is the designator, not the legal subject.** `kanon diff` keys paragraphs by
+  their CFR designator, so a paragraph that was renumbered or restructured between revisions is
+  reported as GONE plus NEW rather than CHANGED. In the 1996 -> 2025 diff of 10 CFR 50.59, `(c)`
+  reads as GONE because its subject matter now lives in `(c)(1)`/`(c)(2)`. The output says so, and
+  the quoted text is there to be compared. A paragraph whose text is identical but whose number
+  moved cannot be detected at all without per-paragraph chunking.
 - **Same-provider judge.** `RAG_MODEL` and `JUDGE_MODEL` both default to an OpenAI model, so the
   Tier C judge may share failure modes with the generator. Accepted for consistency; set
   `JUDGE_MODEL=anthropic:<model>` (one line) for cross-family independence. The judge is

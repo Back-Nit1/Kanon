@@ -6,10 +6,13 @@ CFR section so §50.58/§50.60/§50.61 text sharing a chunk is never attributed 
 """
 
 import re
+from datetime import date
 
 from pydantic import BaseModel
 
 from kanon.ingest import Chunk
+from kanon.retrieval import is_record
+from kanon.store import Edge
 
 
 class Paragraph(BaseModel):
@@ -99,3 +102,119 @@ _QUOTES = str.maketrans({"“": '"', "”": '"', "‘": '"', "’": '"'})
 def normalize(text: str) -> str:
     text = text.replace("''", '"').replace("``", '"').translate(_QUOTES)
     return " ".join(text.casefold().split())
+
+
+class ParagraphDelta(BaseModel):
+    key: str
+    old: Paragraph
+    new: Paragraph
+
+
+class DiffResult(BaseModel):
+    doc_id: str
+    from_as_of: date
+    to_as_of: date
+    from_revisions: list[str]
+    to_revisions: list[str]
+    gone: list[Paragraph] = []
+    added: list[Paragraph] = []
+    changed: list[ParagraphDelta] = []
+    ended_by: list[Edge] = []
+    unresolved: list[Edge] = []
+    notes: list[str] = []
+    kinds: dict[str, str] = {}      # "doc@rev" -> stored kind, so format_diff needs no store
+
+
+def diff_paragraphs(old: dict[str, Paragraph], new: dict[str, Paragraph]):
+    gone = [old[k] for k in old if k not in new]
+    added = [new[k] for k in new if k not in old]
+    changed = [ParagraphDelta(key=k, old=old[k], new=new[k]) for k in old
+               if k in new and normalize(old[k].text) != normalize(new[k].text)]
+    return gone, added, changed
+
+
+def _side(index, revs, doc_id, section):
+    out: dict[str, Paragraph] = {}
+    for rev in revs:
+        out.update(paragraphs(index.chunks_for(f"{doc_id}@{rev}"), section))
+    return out
+
+
+def diff_as_of(index, store, doc_id: str, from_as_of: date, to_as_of: date,
+               section: str | None = None) -> DiffResult:
+    sides = [store.resolve_authority(doc_id, d) for d in (from_as_of, to_as_of)]
+    r = DiffResult(doc_id=doc_id, from_as_of=from_as_of, to_as_of=to_as_of,
+                   from_revisions=[k[1] for k in sides[0].authoritative],
+                   to_revisions=[k[1] for k in sides[1].authoritative])
+    for res in sides:
+        for k in res.authoritative:
+            if (d := store.get(*k)):
+                r.kinds[f"{k[0]}@{k[1]}"] = d.kind
+    r.unresolved = [e for res in sides for e in res.unresolved]
+    if r.unresolved:
+        r.notes.append("authority is unresolved on at least one date; not diffing an ambiguous record")
+        return r
+    for res, d in zip(sides, (from_as_of, to_as_of)):
+        if not res.authoritative:
+            r.notes.append(f"nothing governed on {d}")
+            history = store.revision_history(doc_id)
+            if history:
+                first = history[-1]
+                r.notes.append(f"earliest recorded version: {first.doc_id} Rev {first.revision}, "
+                               f"effective {first.effective_from or 'unknown'}")
+    if not (sides[0].authoritative and sides[1].authoritative):
+        return r
+    have = [f"{doc_id}@{v}" for v in r.from_revisions + r.to_revisions]
+    missing = [k for k in have if not index.chunks_for(k)]
+    if missing:
+        r.notes += [f"no text indexed for {k}" for k in missing]
+        return r
+    if section is None:
+        m = re.fullmatch(r"10CFR(\d+\.\d+[a-z]?)", doc_id)
+        if not m:
+            r.notes.append(f"no CFR section derivable from {doc_id}; paragraph extraction skipped")
+            return r
+        section = m.group(1)
+    old = _side(index, r.from_revisions, doc_id, section)
+    new = _side(index, r.to_revisions, doc_id, section)
+    r.gone, r.added, r.changed = diff_paragraphs(old, new)
+    for rev in r.from_revisions:
+        r.ended_by += [e for e in store.edges_into(doc_id, rev)
+                       if e.edge_type != "partial" and e.valid_from
+                       and from_as_of < e.valid_from <= to_as_of]
+    return r
+
+
+def _label(r: DiffResult, doc: str, rev: str) -> str:
+    kind = r.kinds.get(f"{doc}@{rev}")
+    role = "unknown kind" if kind is None else ("record" if is_record(kind) else "requirement")
+    return f"{doc}@{rev} ({role})"
+
+
+def format_diff(result: DiffResult, quote_chars: int = 160) -> str:
+    r = result
+    q = lambda t: f"\u201c{t[:quote_chars]}{'...' if len(t) > quote_chars else ''}\u201d"
+    ref = lambda x: f"{x.doc_id}@{x.revision} p.{x.page}"
+    lines = [f"Diff of {r.doc_id}: what governed on {r.from_as_of} vs {r.to_as_of}"]
+    for tag, d, revs in (("FROM", r.from_as_of, r.from_revisions), ("TO  ", r.to_as_of, r.to_revisions)):
+        gov = ", ".join(_label(r, r.doc_id, v) for v in revs) or "NOTHING"
+        lines.append(f"  {tag} {d}: {gov}")
+    lines += [f"  NOTE {n}" for n in r.notes]
+    lines += [f"  UNRESOLVED {e.describe()}\n             {q(e.evidence)}" for e in r.unresolved]
+    for e in r.ended_by:
+        lines.append(f"  ENDED BY {e.describe()}")
+    for p in r.gone:
+        lines.append(f"\nGONE {p.key}  [{ref(p)}]\n  {q(p.text)}")
+        lines += [f"  ended by: {e.describe()}" for e in r.ended_by]
+    for d in r.changed:
+        lines.append(f"\nCHANGED {d.key}\n  was [{ref(d.old)}]: {q(d.old.text)}"
+                     f"\n  now [{ref(d.new)}]: {q(d.new.text)}")
+    for p in r.added:
+        lines.append(f"\nNEW {p.key}  [{ref(p)}]\n  {q(p.text)}")
+    if r.gone or r.added:
+        # A reader seeing "GONE (c)" must not conclude the subject matter was dropped: in the
+        # 1996 -> 2025 diff, (c) was restructured into (c)(1)/(c)(2), which reads as GONE + NEW.
+        lines += ["", "GONE/NEW are designator-level. A paragraph renumbered or restructured "
+                  "between revisions reads as GONE plus NEW, not CHANGED, so compare the quoted "
+                  "text before concluding a requirement disappeared."]
+    return "\n".join(lines)

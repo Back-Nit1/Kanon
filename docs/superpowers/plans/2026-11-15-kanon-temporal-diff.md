@@ -252,7 +252,11 @@ def test_identical_text_with_different_whitespace_is_not_changed():
 def test_diff_as_of_names_both_governing_revisions(index, store):
     r = diff_as_of(index, store, "10CFR50.59", date(2000, 6, 1), date(2026, 11, 15))
     assert r.from_revisions == ["1996-08-28"] and r.to_revisions == ["2025-01-29"]
-    assert "(a)(2)" in [g.key for g in r.gone]
+    # (a)(2) exists in both revisions as different law ("unreviewed safety question" in 1996,
+    # "Departure from a method of evaluation" in 2025), so it is CHANGED, not gone
+    delta = next(d for d in r.changed if d.key == "(a)(2)")
+    assert "unreviewed safety question" in delta.old.text
+    assert "Departure from a method of evaluation" in delta.new.text
     assert [(e.from_doc, e.from_rev) for e in r.ended_by] == [("10CFR50.59", "2001-03-13")]
 
 def test_same_date_both_sides_is_an_empty_diff(index, store):

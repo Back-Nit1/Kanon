@@ -5,6 +5,7 @@
   kanon worker                       one more queue worker (run several in parallel)
   kanon dlq [--requeue KEY]          dead letter report: failed documents and why
   kanon resolve RG-1.187 --as-of 2019-06-01
+  kanon diff 10CFR50.59 --from 2000-06-01 --to 2026-11-15 [--section 50.59]
   kanon ask "question" [--mode graph|flag|none] [--today YYYY-MM-DD]
 """
 
@@ -30,6 +31,11 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("resolve")
     r.add_argument("doc_id")
     r.add_argument("--as-of", type=date.fromisoformat, required=True)
+    df = sub.add_parser("diff")
+    df.add_argument("doc_id")
+    df.add_argument("--from", dest="from_as_of", type=date.fromisoformat, required=True)
+    df.add_argument("--to", dest="to_as_of", type=date.fromisoformat, required=True)
+    df.add_argument("--section")
     a = sub.add_parser("ask")
     a.add_argument("question")
     a.add_argument("--mode", choices=["none", "flag", "graph"], default="graph")
@@ -111,6 +117,12 @@ def main(argv: list[str] | None = None) -> int:
         if n.get("dead"):
             print(f"{n['dead']} document(s) failed {queue.MAX_ATTEMPTS}x and are NOT searchable: run `kanon dlq`")
             return 1
+        return 0
+
+    if args.cmd == "diff":
+        from kanon.diff import diff_as_of, format_diff
+        print(format_diff(diff_as_of(index, store, args.doc_id, args.from_as_of,
+                                     args.to_as_of, args.section)))
         return 0
 
     if args.cmd == "ask":

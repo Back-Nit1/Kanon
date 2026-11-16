@@ -1,7 +1,13 @@
 """Paragraph extraction on verbatim chunk text read from the Chroma index (10CFR50.59@1996-08-28)."""
 
-from kanon.diff import normalize, paragraphs, section_region
+from datetime import date
+
+import pytest
+
+from kanon.diff import (DiffResult, Paragraph, diff_as_of, diff_paragraphs, format_diff,
+                        normalize, paragraphs, section_region)
 from kanon.ingest import Chunk
+from kanon.store import AuthorityStore, DocumentVersion, Edge
 
 R1996 = (
     "[27 FR 12186, Dec. 8, 1962, as amended at 35 FR 11461, July 17, 1970]\n"
@@ -101,3 +107,130 @@ def test_bare_running_head_does_not_attribute_foreign_tail_regression_2001():
             "§ 50.59\n"
             "- (6) No petition or request for review will be entertained by the Commission.\n")
     assert paragraphs([chunk(text, 1)]) == {}
+
+
+# --- Task 3: date-to-date diff -------------------------------------------------------------------
+
+R2025 = ("§ 50.59 Changes, tests, and experiments.\n"
+         "(a)(1) Change means a modification or addition to, or removal from, the facility or "
+         "procedures that affects a design function, method of performing or controlling the "
+         "function, or an evaluation that demonstrates that intended functions will be accomplished.\n"
+         "(a)(2) Departure from a method of evaluation described in the FSAR (as updated) used in "
+         "establishing the design bases or in the safety analyses means changing any of the "
+         "elements of the method described in the FSAR.\n"
+         "(b) Licensees shall maintain records of changes in the facility.\n")
+
+
+def p(key, text):
+    return Paragraph(key=key, text=text, page=1, doc_id="10CFR50.59", revision="1996-08-28")
+
+
+class FakeIndex:
+    def __init__(self, texts):
+        self.texts = texts
+
+    def chunks_for(self, doc_key):
+        t = self.texts.get(doc_key)
+        if t is None:
+            return []
+        rev = doc_key.split("@")[1]
+        c = chunk(t, 1)
+        return [c.model_copy(update={"revision": rev, "id": f"{doc_key}#0001"})]
+
+
+def _edge(frm, to, when, typ="full"):
+    return Edge(from_doc=frm[0], from_rev=frm[1], to_doc=to[0], to_rev=to[1], edge_type=typ,
+                valid_from=when, evidence="x", confidence="explicit")
+
+
+@pytest.fixture
+def store():
+    s = AuthorityStore()
+    for rev, eff in (("1996-08-28", date(1996, 8, 28)), ("2001-03-13", date(2001, 3, 13)),
+                     ("2025-01-29", date(2025, 1, 29))):
+        s.upsert_document(DocumentVersion(doc_id="10CFR50.59", revision=rev, kind="regulation",
+                                          status="active", effective_from=eff))
+    a, b, c = (("10CFR50.59", r) for r in ("1996-08-28", "2001-03-13", "2025-01-29"))
+    s.add_edge(_edge(b, a, date(2001, 3, 13)))
+    s.add_edge(_edge(c, b, date(2025, 1, 29)))
+    for rev, eff in (("1", date(2000, 1, 1)), ("2", date(2020, 7, 7))):
+        s.upsert_document(DocumentVersion(doc_id="RG-1.187", revision=rev, kind="reg_guide",
+                                          status="active", effective_from=eff))
+    s.add_edge(_edge(("RG-1.187", "2"), ("RG-1.187", "1"), date(2020, 7, 7)))
+    for doc, rev, eff in (("RG-1.85", "31", date(1999, 5, 1)), ("RG-1.84", "32", date(2003, 6, 1))):
+        s.upsert_document(DocumentVersion(doc_id=doc, revision=rev, kind="reg_guide",
+                                          status="active", effective_from=eff))
+    s.add_edge(_edge(("RG-1.84", "32"), ("RG-1.85", "31"), date(2003, 6, 1), "cross_family")
+               .model_copy(update={"confidence": "inferred"}))
+    s.add_edge(_edge(("RG-1.85", "31"), ("RG-1.85", "31"), date(2004, 6, 18), "withdrawn"))
+    return s
+
+
+@pytest.fixture
+def index():
+    return FakeIndex({"10CFR50.59@1996-08-28": R1996, "10CFR50.59@2001-03-13": R2025,
+                      "10CFR50.59@2025-01-29": R2025})
+
+
+def test_diff_paragraphs_classifies_gone_added_changed():
+    old = {"(a)(2)": p("(a)(2)", "unreviewed safety question"), "(c)": p("(c)", "who desires")}
+    new = {"(a)(1)": p("(a)(1)", "Change means a modification"), "(c)": p("(c)", "only if:")}
+    gone, added, changed = diff_paragraphs(old, new)
+    assert [g.key for g in gone] == ["(a)(2)"]
+    assert [a.key for a in added] == ["(a)(1)"]
+    assert [d.key for d in changed] == ["(c)"]
+
+
+def test_identical_text_with_different_whitespace_is_not_changed():
+    old = {"(a)": p("(a)", "the  ''Code'',\nas updated")}
+    new = {"(a)": p("(a)", "the “Code”, as updated")}
+    assert diff_paragraphs(old, new)[2] == []
+
+
+def test_diff_as_of_names_both_governing_revisions(index, store):
+    r = diff_as_of(index, store, "10CFR50.59", date(2000, 6, 1), date(2026, 11, 15))
+    assert r.from_revisions == ["1996-08-28"] and r.to_revisions == ["2025-01-29"]
+    # same designator, different requirement: (a)(2) is CHANGED, not gone
+    delta = next(d for d in r.changed if d.key == "(a)(2)")
+    assert "unreviewed safety question" in delta.old.text
+    assert "Departure from a method of evaluation" in delta.new.text
+    assert [g.key for g in r.gone] == []   # R1996 fixture holds only (a)(1)/(a)(2); both exist in 2025
+    assert [a.key for a in r.added] == ["(b)"]
+    assert [(e.from_doc, e.from_rev) for e in r.ended_by] == [("10CFR50.59", "2001-03-13")]
+
+
+def test_same_date_both_sides_is_an_empty_diff(index, store):
+    r = diff_as_of(index, store, "10CFR50.59", date(2000, 6, 1), date(2000, 6, 1))
+    assert (r.gone, r.added, r.changed) == ([], [], [])
+    assert r.from_revisions == r.to_revisions == ["1996-08-28"]
+
+
+def test_date_before_earliest_revision_says_nothing_governed(index, store):
+    r = diff_as_of(index, store, "10CFR50.59", date(1996, 4, 1), date(2026, 11, 15))
+    assert r.from_revisions == []
+    assert any("nothing governed on 1996-04-01" in n for n in r.notes)
+    assert r.gone == []                       # not "nothing changed"
+
+
+def test_metadata_only_document_reports_no_text(index, store):
+    r = diff_as_of(index, store, "RG-1.187", date(2019, 12, 1), date(2020, 8, 1))
+    assert any("no text indexed" in n for n in r.notes)
+    assert (r.gone, r.added, r.changed) == ([], [], [])
+
+
+def test_conflict_window_surfaces_unresolved_instead_of_diffing(index, store):
+    r = diff_as_of(index, store, "RG-1.85", date(2003, 9, 1), date(2026, 11, 15))
+    assert r.unresolved
+    assert any("authority is unresolved" in n for n in r.notes)
+    assert (r.gone, r.added, r.changed) == ([], [], [])
+
+
+def test_format_diff_labels_every_line_with_revision_and_page():
+    r = DiffResult(doc_id="10CFR50.59", from_as_of=date(2000, 6, 1), to_as_of=date(2026, 11, 15),
+                   from_revisions=["1996-08-28"], to_revisions=["2025-01-29"],
+                   gone=[p("(a)(2)", "A proposed change shall be deemed")], added=[], changed=[],
+                   ended_by=[], unresolved=[], notes=[],
+                   kinds={"10CFR50.59@1996-08-28": "regulation", "10CFR50.59@2025-01-29": "regulation"})
+    text = format_diff(r)
+    assert "GONE" in text and "(a)(2)" in text and "1996-08-28" in text and "p.1" in text
+    assert "requirement" in text
