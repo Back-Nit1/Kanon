@@ -103,7 +103,8 @@ def main(argv: list[str] | None = None) -> int:
         if unenforced:
             print(f"[{len(unenforced)} authority violation(s) recorded but not enforced in mode "
                   f"'{args.mode}' — see trace]")
-        print(f"[trace: {path}]")
+        from kanon.ratelimit import used
+        print(f"[trace: {path} | {used()} model requests]")
         return 0
     return 1
 

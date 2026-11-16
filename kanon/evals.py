@@ -44,6 +44,7 @@ import yaml
 from pydantic import BaseModel
 
 from kanon.ingest import Chunk
+from kanon.ratelimit import BudgetExceeded, used
 from kanon.retrieval import CorpusIndex, Reranker, is_record
 from kanon.store import AuthorityStore
 from kanon.timing import QuestionTimeout, deadline, set_context, span
@@ -231,6 +232,10 @@ def generation_eval(llm, index: CorpusIndex, store: AuthorityStore, today: date,
         # question as 'error', keep the partial trace, and carry on. An error is NOT an
         # abstention — the system never reached a gate decision — so it is reported separately
         # and excluded from the named failure cases, exactly like a timeout.
+        except BudgetExceeded:
+            # Not a failed question: the run is out of its request budget and nothing was sent.
+            # Recording it per question would mark every remaining row 'error' and hide why.
+            raise
         except (QuestionTimeout, Exception) as exc:
             timed_out = isinstance(exc, QuestionTimeout)
             decision = "timeout" if timed_out else "error"
@@ -499,14 +504,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"reranker: {rerank.model} (first search downloads the weights)", file=sys.stderr)
     llm = None if args.retrieval_only else chat_model(s)
     judge_llm = chat_model(s, role="judge") if args.judge and llm else None
-    res = run(index, store, args.questions, args.k, tuple(args.modes), llm,
-              s.trace_dir / "eval", judge_llm, s.judge_model, args.question_timeout, rerank)
+    try:
+        res = run(index, store, args.questions, args.k, tuple(args.modes), llm,
+                  s.trace_dir / "eval", judge_llm, s.judge_model, args.question_timeout, rerank)
+    except BudgetExceeded as exc:
+        # Deliberate stop, not a crash: the budget exists so a run cannot quietly spend an
+        # account. Results are not written, because a partial sweep is not a comparison.
+        print(f"\nSTOPPED: {exc}", file=sys.stderr)
+        return 2
 
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "results.json").write_text(json.dumps(res, indent=2, default=str))
     (args.out / "report.md").write_text(render_report(res))
     for m, g in (res["generation"] or {}).items():
         print(f"{m:5s}  {pair(g['summary'])}")
+    # Say what the run cost in requests. Chat calls dominate the bill; embeddings are cents.
+    print(f"{used()} model requests (chat + embeddings) in this run")
     print(f"wrote {args.out / 'report.md'} and {args.out / 'results.json'}")
     return 0
 
