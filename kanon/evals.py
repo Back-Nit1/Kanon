@@ -480,10 +480,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="also measure every mode with the cross-encoder reranker "
                         "(default KANON_RERANK_MODEL, else BAAI/bge-reranker-v2-m3); "
                         "doubles the run, and with an LLM doubles its cost")
-    # Measured on this corpus: a question takes roughly 7-23 s (three sequential reasoning-model
-    # calls). 60 s leaves headroom over the slowest seen and still catches a hung request.
+    # Re-measured over 272 recorded question-runs: median 12 s, p90 23.5 s — but the anchor
+    # question (q01, four sub-questions and the most tool calls) now takes 43-60 s where it took
+    # ~27 s earlier, so a 60 s limit cut off the one question the project is built around. 180 s
+    # is ~3x the slowest question observed and still catches a genuinely hung request.
     p.add_argument("--question-timeout", type=float,
-                   default=float(os.environ.get("KANON_QUESTION_TIMEOUT", 60)),
+                   default=float(os.environ.get("KANON_QUESTION_TIMEOUT", 180)),
                    help="seconds allowed per question per mode (0 = no limit); "
                         "a timed-out question is recorded, reported, and the run moves on. "
                         "Time spent waiting on the rate limiter counts against it, so lower "
