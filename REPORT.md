@@ -56,6 +56,14 @@ generation rows exactly two documents are ever cited, `10CFR50.59` and `EA-98-15
 among the ten rows the `governs()` fix changes. The ten are metadata-only reg guides with no
 indexed text, so they cannot be retrieved or cited in the first place.
 
+A later change does affect generation and is NOT reflected in §1. `DRAFT_PROMPT` and
+`Citation.section` now ask the model to report the paragraph designator it cited ((a)(2), (c)(2)(i))
+instead of a section title, so the new `paragraph_not_in_revision` gate rule can verify it. §1's
+rates were measured before that, with the old prompt. The rule itself is proven on the real index —
+a citation to 50.59(d)(1) against the 1996-08-28 revision is blocked, while (b)(1) and (e), which
+exist there, pass — but what the prompt change does to the three modes' superseded-citation and
+answer rates has not been measured.
+
 One claim in this report *improves* and is left unrestated: before `8c0fedc`, `flag` and `graph`
 shared the status blind spot, so the comparison in §1 and §3 was between two modes that agreed on a
 wrong definition of "withdrawn". That is no longer true, and the resolver numbers did not change.

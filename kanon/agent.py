@@ -66,7 +66,15 @@ class QueryClass(BaseModel):
 class Citation(BaseModel):
     doc_id: str
     revision: str
-    section: str | None = None
+    # The paragraph designator is what makes the Tier B paragraph check possible: the gate looks
+    # it up in the cited revision's own extracted text. Asking for the designator is asking the
+    # model to report what it cited more precisely, not to judge authority. A section title or
+    # anything unparseable yields no designator and the check is skipped, never guessed.
+    section: str | None = Field(
+        default=None,
+        description="The paragraph designator cited, in CFR form: '(a)(2)', '(c)(2)(i)'. Use the "
+                    "designator alone, not the section title. Omit it if the claim is not tied to "
+                    "one numbered paragraph.")
     page: int
 
 
@@ -127,6 +135,9 @@ Make every call you need now, in this single turn."""
 
 DRAFT_PROMPT = """Answer the engineer's question using ONLY the numbered sources below.
 - Cite every factual claim with the source's doc_id, revision and page exactly as labelled.
+- When a claim rests on one numbered paragraph, put that paragraph's designator in the
+  citation's `section` field, in CFR form: (a)(2), (c)(2)(i). Copy it from the source text;
+  never infer one. Omit it if the claim is not tied to a single numbered paragraph.
 - Sources of kind operating_experience, rulemaking or notice are records of past events or
   changes, not current requirements; say so when used, and never present one as what governs.
 - If the sources don't answer part of the question, say what is missing. Do not fill gaps.
