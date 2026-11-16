@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS supersession_edges (
   UNIQUE (from_doc, from_rev, to_doc, to_rev, edge_type, evidence)
 );
 CREATE INDEX IF NOT EXISTS edges_to ON supersession_edges (to_doc, to_rev);
+CREATE INDEX IF NOT EXISTS edges_from ON supersession_edges (from_doc, from_rev);
 """
 
 # Edge types that end the target's authority. 'partial' deliberately absent: under partial
@@ -251,6 +252,12 @@ class AuthorityStore:
         """Edges whose target is (doc_id, revision), as recorded on `known_at` (default: now)."""
         rows = self.db.execute(
             "SELECT * FROM supersession_edges WHERE to_doc=? AND to_rev=?", (doc_id, revision))
+        return [_edge(r) for r in rows if _live(r, known_at)]
+
+    def edges_out_of(self, doc_id: str, revision: str, known_at: datetime | None = None) -> list[Edge]:
+        """Edges whose source is (doc_id, revision): what it superseded, as recorded on `known_at`."""
+        rows = self.db.execute(
+            "SELECT * FROM supersession_edges WHERE from_doc=? AND from_rev=?", (doc_id, revision))
         return [_edge(r) for r in rows if _live(r, known_at)]
 
     def unresolved_into(self, doc_id: str, revision: str,

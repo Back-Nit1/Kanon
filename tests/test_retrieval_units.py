@@ -45,3 +45,37 @@ def test_filtered_hybrid_isolation_and_exact_identifiers():
     assert index.search("10 CFR 50.59", 1, "flag", plant="Plant A")[0].id == "global"
     assert {c.id for c in index.search_precedent("pump replacement", 10, plant="Plant A")} == {"event"}
     assert {c.id for c in index.search("pump replacement", 10, "flag", plant="Plant A", unit="9")} == {"global"}
+
+
+class _FakeCol:
+    def __init__(self, chunks):
+        self.rows = chunks
+
+    def get(self, where, include):
+        rows = [c for c in self.rows if c.doc_key == where["doc_key"]]
+        return {"ids": [c.id for c in rows], "documents": [c.text for c in rows],
+                "metadatas": [c.chroma_metadata() for c in rows]}
+
+
+def _fake_index(hot, cold):
+    index = object.__new__(CorpusIndex)   # no embedder, store or Chroma: chunks_for needs none
+    index.hot, index.cold = _FakeCol(hot), _FakeCol(cold)
+    return index
+
+
+def _page_chunk(id, page):
+    return Chunk(id=id, text=f"text {page}", doc_id="10CFR50.59", revision="1996-08-28",
+                 kind="regulation", status="superseded", effective_from="1996-08-28",
+                 effective_to=None, issue_date="1996-08-28", section="body", page=page,
+                 accession="", source_url="", paginated=True)
+
+
+def test_chunks_for_merges_tiers_in_page_order():
+    index = _fake_index(hot=[_page_chunk("b", 2)], cold=[_page_chunk("a", 1)])
+    got = index.chunks_for("10CFR50.59@1996-08-28")
+    assert [c.page for c in got] == [1, 2]
+    assert got[0].score is None and got[0].effective_to is None
+
+
+def test_chunks_for_unknown_doc_key_is_empty():
+    assert _fake_index(hot=[], cold=[]).chunks_for("RG-1.187@2") == []

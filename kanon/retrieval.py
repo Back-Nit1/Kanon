@@ -181,6 +181,16 @@ class CorpusIndex:
 
     # ---- reads ----------------------------------------------------------------------------
 
+    def chunks_for(self, doc_key: str) -> list[Chunk]:
+        """Every chunk of one revision, hot and cold, in page order. A metadata read: no
+        embedding, BM25 or rerank. Unknown doc_key returns []."""
+        out = []
+        for col in (self.hot, self.cold):
+            data = col.get(where={"doc_key": doc_key}, include=["documents", "metadatas"])
+            out += [Chunk.from_chroma(i, t, m)
+                    for i, t, m in zip(data["ids"], data["documents"], data["metadatas"])]
+        return sorted(out, key=lambda c: (c.page, c.id))
+
     def search(self, query: str, k: int, mode: Mode, as_of: date | None = None,
                plant: str | None = None, unit: str | None = None,
                docket: str | None = None) -> list[Chunk]:

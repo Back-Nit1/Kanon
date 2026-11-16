@@ -124,3 +124,14 @@ def test_regression_guard_superseded_row_still_governs_in_its_own_era():
         status="superseded", effective_from=date(1996, 8, 28)))
     assert s.governs("10CFR50.59", "1996-08-28", date(1998, 5, 13))
     assert s.resolve_authority("10CFR50.59", date(1998, 5, 13)).withdrawn_undated == []
+
+
+def test_edges_out_of_returns_what_a_revision_superseded(store):
+    out = store.edges_out_of("10CFR50.59", "1999-10-04")
+    assert [(e.to_doc, e.to_rev) for e in out] == [("10CFR50.59", "1997-01-01")]
+    assert store.edges_out_of("10CFR50.59", "1997-01-01") == []
+
+
+def test_edges_out_of_respects_known_at(store):
+    before = datetime(1990, 1, 1, tzinfo=timezone.utc)
+    assert store.edges_out_of("10CFR50.59", "1999-10-04", known_at=before) == []
