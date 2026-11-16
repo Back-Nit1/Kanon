@@ -37,7 +37,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
-from kanon.diff import Paragraph, designator_from_section, paragraphs
+from kanon.diff import Paragraph, designator_from_section, diff_as_of, format_diff, paragraphs
 from kanon.ingest import Chunk
 from kanon.retrieval import CorpusIndex, Mode, is_record
 from kanon.store import AuthorityStore
@@ -219,6 +219,60 @@ def check_citations(store: AuthorityStore, citations: list[Citation], retrieved:
     return out
 
 
+def citation_notes(store: AuthorityStore, citations: list[Citation], as_of: date) -> list[str]:
+    """One provenance line per citation: requirement vs record, governing window, the as_of it was
+    checked against, and what it superseded. Pure function of the store; no model."""
+    out = []
+    for c in citations:
+        line = f"- {c.doc_id} Rev {c.revision}, p.{c.page}" + (f", §{c.section}" if c.section else "")
+        doc = store.get(c.doc_id, c.revision)
+        if doc is None:
+            out.append(f"{line} | not in authority store | checked against as_of={as_of}")
+            continue
+        role = "record" if is_record(doc.kind) else "requirement"
+        window = f"governed {doc.effective_from or 'unknown'}..{doc.effective_to or 'open'}"
+        line += f" | {role} | {window} | checked against as_of={as_of}"
+        sup = [f"{e.to_doc} Rev {e.to_rev}" for e in store.edges_out_of(c.doc_id, c.revision)]
+        out.append(line + (f" | supersedes: {', '.join(sup)}" if sup else ""))
+    return out
+
+
+def abstention_text(index: CorpusIndex, store: AuthorityStore, violations: list[Violation],
+                    as_of: date) -> str:
+    """The abstain message: every violation's reason, unchanged, plus for superseded /
+    not-governing citations what actually governed on `as_of` and the paragraph-level difference.
+    The explanation is best-effort: any failure degrades to the governing set, never to silence."""
+    lines = []
+    for v in violations:
+        lines.append(f"- {v.doc_id} Rev {v.revision}: [{v.rule}] {v.detail}" if v.doc_id != "—"
+                     else f"- [{v.rule}] {v.detail}")
+        if v.rule in ("superseded", "not_governing_on_as_of") and v.doc_id != "—":
+            lines += _explain(index, store, v, as_of)
+    return "ABSTAINED — authority could not be verified:\n" + "\n".join(lines)
+
+
+def _explain(index: CorpusIndex, store: AuthorityStore, v: Violation, as_of: date) -> list[str]:
+    try:
+        governing = store.resolve_authority(v.doc_id, as_of).authoritative
+    except Exception as e:
+        return [f"    (could not determine what governed on {as_of}: {e})"]
+    if not governing:
+        return [f"    nothing governed {v.doc_id} on {as_of}"]
+    out = [f"    governing on {as_of}: " + ", ".join(f"{d}@{r}" for d, r in governing)]
+    try:
+        cited = store.get(v.doc_id, v.revision)
+        if cited is None or cited.effective_from is None:
+            return out
+        keys = [(v.doc_id, v.revision), *governing]
+        missing = [f"{d}@{r}" for d, r in keys if not index.chunks_for(f"{d}@{r}")]
+        if missing:
+            return out + [f"    no indexed text for {', '.join(missing)}; paragraph diff unavailable"]
+        diff = format_diff(diff_as_of(index, store, v.doc_id, cited.effective_from, as_of))
+        return out + ["    " + ln if ln else ln for ln in diff.splitlines()]
+    except Exception as e:
+        return out + [f"    (paragraph diff unavailable: {e})"]
+
+
 def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, mode: Mode):
     tools = make_tools(index, store, mode)
     by_name = {t.name: t for t in tools}
@@ -349,13 +403,12 @@ def build_agent(llm: BaseChatModel, index: CorpusIndex, store: AuthorityStore, m
     def answer(state: AgentState) -> dict:
         sources = "\n".join(f"- {c.doc_id} Rev {c.revision}, p.{c.page}"
                             + (f", §{c.section}" if c.section else "") for c in state["citations"])
-        return {"final": f"{state['draft']}\n\nSources:\n{sources}"}
+        notes = "\n".join(citation_notes(store, state["citations"], state["as_of"]))
+        return {"final": f"{state['draft']}\n\nSources:\n{sources}\n{notes}"}
 
     def abstain(state: AgentState) -> dict:
-        lines = [f"- {v.doc_id} Rev {v.revision}: [{v.rule}] {v.detail}" if v.doc_id != "—"
-                 else f"- [{v.rule}] {v.detail}" for v in state["violations"]]
         return {"decision": "abstain",
-                "final": "ABSTAINED — authority could not be verified:\n" + "\n".join(lines)}
+                "final": abstention_text(index, store, state["violations"], state["as_of"])}
 
     g = StateGraph(AgentState)
     for fn in (classify_query, select_tools, retrieve, resolve_authority, draft, validate, answer, abstain):

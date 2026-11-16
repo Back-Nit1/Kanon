@@ -20,7 +20,7 @@ Operational verification and security notes: [VERIFICATION.md](VERIFICATION.md) 
 | 2     | `kanon/queue.py`                         | Postgres queue, resumable workers, lifecycle audit, DLQ + chunk sidecar        |
 | 2     | `kanon/diff.py`                          | Deterministic CFR paragraph diff between two as-of dates (`kanon diff`)        |
 | 2     | `kanon/retrieval.py`                     | Hot/cold Chroma + BM25, RRF fusion, modes `none`/`flag`/`graph`                |
-| 3     | `kanon/tools.py`                         | Typed tools; `as_of` required; no unscoped search tool                         |
+| 3     | `kanon/tools.py`                         | Typed tools; `as_of` required; no unscoped search tool; `diff_revisions` (10 s budget) |
 | 3     | `kanon/agent.py`                         | LangGraph agent with the Tier B gate as a blocking node                        |
 | 3     | `kanon/trace.py`                         | Callback → human-readable trace per query                                      |
 | 4A    | `kanon/checks.py`                        | Pipeline integrity assertions (halt, never self-repair)                        |

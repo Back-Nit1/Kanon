@@ -10,14 +10,50 @@ everything, whatever date" — inexpressible.
     docstring) — an interviewer will ask why this tool breaks the rule.
 """
 
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from datetime import date
 
 from langchain_core.tools import BaseTool, tool
 from pydantic import BaseModel, Field
 
+from kanon.diff import DiffResult, diff_as_of
 from kanon.ingest import Chunk
 from kanon.retrieval import CorpusIndex, Mode
 from kanon.store import AuthorityResult, AuthorityStore, DocumentVersion, Edge
+
+DIFF_TIMEOUT_S = 10   # wall-clock budget for one diff; here, not config.py, so it sits beside its only user
+
+
+def run_with_budget(fn: Callable[[], DiffResult], seconds: int = DIFF_TIMEOUT_S, *,
+                    doc_id: str = "", from_as_of: date = date.min,
+                    to_as_of: date = date.min) -> DiffResult:
+    """Run `fn` in a worker thread; on expiry return a typed result instead of raising, so a
+    hanging diff degrades to "could not compute" rather than killing the graph run.
+
+    The request context is passed in rather than patched onto the result afterwards, so a timed-out
+    diff still says which document and dates it gave up on.
+    """
+    ex = ThreadPoolExecutor(max_workers=1)
+    try:
+        return ex.submit(fn).result(timeout=seconds)
+    except FutureTimeout:
+        # ponytail: the abandoned thread finishes its read in the background; diff_as_of has no
+        # writes, so there is nothing to roll back. Revisit only if a diff ever mutates state.
+        return DiffResult(doc_id=doc_id, from_as_of=from_as_of, to_as_of=to_as_of,
+                          from_revisions=[], to_revisions=[],
+                          notes=[f"diff timed out after {seconds}s"])
+    finally:
+        ex.shutdown(wait=False)
+
+
+def _thread_store(store: AuthorityStore) -> AuthorityStore:
+    """A store the worker thread may use. sqlite3 connections belong to the thread that opened
+    them, so the diff worker opens its own against the same file; reads need no coordination.
+    An in-memory store has no file to reopen and is a test-only path, so it is passed through.
+    """
+    return store if store.path == ":memory:" else AuthorityStore(store.path)
 
 
 class RevisionAuthority(BaseModel):
@@ -55,6 +91,12 @@ class PrecedentArgs(BaseModel):
     plant: str | None = None
     unit: str | None = None
     docket: str | None = None
+
+
+class DiffRevisionsArgs(BaseModel):
+    doc_id: str = Field(description="Document id, e.g. '10CFR50.59'.")
+    as_of_from: date = Field(description="Earlier date to compare. Required.")
+    as_of_to: date = Field(description="Later date to compare. Required.")
 
 
 def make_tools(index: CorpusIndex, store: AuthorityStore, mode: Mode, k: int = 8) -> list[BaseTool]:
@@ -103,5 +145,15 @@ def make_tools(index: CorpusIndex, store: AuthorityStore, mode: Mode, k: int = 8
         governing check, nothing else."""
         return index.search_precedent(f"{system} {symptom}", k, since, plant=plant, unit=unit, docket=docket)
 
+    @tool(args_schema=DiffRevisionsArgs)
+    def diff_revisions(doc_id: str, as_of_from: date, as_of_to: date) -> DiffResult:
+        """Compare the paragraph text of the revisions of one document that governed on two dates:
+        paragraphs gone, added, or changed between them. Both dates are REQUIRED. The result is
+        EVIDENCE about what the text said, not an authority decision; the authority gate still
+        decides what may be cited. Gives up after 10 seconds with a note instead of an answer."""
+        return run_with_budget(lambda: diff_as_of(index, _thread_store(store), doc_id,
+                                                  as_of_from, as_of_to),
+                               doc_id=doc_id, from_as_of=as_of_from, to_as_of=as_of_to)
+
     return [search_current_requirements, get_revision_history, resolve_supersession,
-            find_precedent_events]
+            find_precedent_events, diff_revisions]

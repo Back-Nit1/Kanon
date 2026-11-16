@@ -151,6 +151,9 @@ def _d(value: str | None) -> date | None:
 
 class AuthorityStore:
     def __init__(self, path: Path | str = ":memory:"):
+        # Recorded so a worker thread can open its OWN connection: a sqlite3 connection belongs to
+        # the thread that created it, and sharing one across live threads is undefined behaviour.
+        self.path = str(path)
         self.db = sqlite3.connect(str(path))
         self.db.row_factory = sqlite3.Row
         self.db.executescript(SCHEMA)

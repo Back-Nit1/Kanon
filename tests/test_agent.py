@@ -98,3 +98,85 @@ def test_record_and_unknown_document_skip_paragraph_rule():
     ghost = Citation(doc_id="NOPE", revision="1", section="(z)(9)", page=1)
     out = check_citations(s, [ghost], [], AS_OF, "current", paragraphs=_resolver(calls))
     assert [v.rule for v in out] == ["unknown_document"] and calls == []
+
+
+# --- Task 5: citation provenance and the explained block ----------------------------------------
+from kanon.agent import Violation, abstention_text, citation_notes
+from kanon.store import Edge
+from tests.test_diff import R1996, R2025, FakeIndex
+
+
+def _t5_store():
+    s = AuthorityStore()
+    for rev, eff in (("1996-08-28", date(1996, 8, 28)), ("2001-03-13", date(2001, 3, 13)),
+                     ("2025-01-29", date(2025, 1, 29))):
+        s.upsert_document(DocumentVersion(doc_id="10CFR50.59", revision=rev, kind="regulation",
+                                          status="active", effective_from=eff))
+    for new, old, when in (("2001-03-13", "1996-08-28", date(2001, 3, 13)),
+                           ("2025-01-29", "2001-03-13", date(2025, 1, 29))):
+        s.add_edge(Edge(from_doc="10CFR50.59", from_rev=new, to_doc="10CFR50.59", to_rev=old,
+                        edge_type="full", valid_from=when, evidence="x", confidence="explicit"))
+    s.upsert_document(DocumentVersion(doc_id="EA-98-155", revision="0", kind="operating_experience",
+                                      status="active", effective_from=date(1998, 1, 1)))
+    s.upsert_document(DocumentVersion(doc_id="RG-1.187", revision="2", kind="reg_guide",
+                                      status="active", effective_from=date(2020, 7, 7)))
+    return s
+
+
+def _t5_index():
+    return FakeIndex({"10CFR50.59@1996-08-28": R1996, "10CFR50.59@2001-03-13": R1996,
+                      "10CFR50.59@2025-01-29": R2025})
+
+
+_V2025 = Violation(rule="not_governing_on_as_of", doc_id="10CFR50.59", revision="2025-01-29",
+                   detail="did not govern on 2001-04-01")
+
+
+def test_citation_notes_carry_the_three_developer_facts():
+    line = citation_notes(_t5_store(), [Citation(doc_id="10CFR50.59", revision="2001-03-13", page=1)],
+                          date(2001, 4, 1))[0]
+    assert "requirement" in line
+    assert "governed 2001-03-13..2025-01-29" in line or "governed 2001-03-13..open" in line
+    assert "as_of=2001-04-01" in line
+    assert "supersedes: 10CFR50.59 Rev 1996-08-28" in line
+
+
+def test_citation_notes_omit_supersedes_when_nothing_superseded():
+    line = citation_notes(_t5_store(), [Citation(doc_id="10CFR50.59", revision="1996-08-28", page=1)],
+                          date(1999, 1, 1))[0]
+    assert "supersedes" not in line
+
+
+def test_record_citation_is_labelled_a_record_not_a_requirement():
+    line = citation_notes(_t5_store(), [Citation(doc_id="EA-98-155", revision="0", page=1)],
+                          date(2001, 4, 1))[0]
+    assert "record" in line and "requirement" not in line
+
+
+def test_abstain_message_names_what_governs_on_the_asked_date():
+    out = abstention_text(_t5_index(), _t5_store(), [_V2025], date(2001, 4, 1))
+    assert "[not_governing_on_as_of] did not govern on 2001-04-01" in out   # reason kept
+    assert "10CFR50.59@2001-03-13" in out
+    assert "GONE" in out or "CHANGED" in out
+
+
+def test_abstain_says_plainly_when_nothing_governed():
+    out = abstention_text(_t5_index(), _t5_store(), [_V2025], date(1990, 1, 1))
+    assert "nothing governed" in out and "[not_governing_on_as_of]" in out
+
+
+def test_abstain_still_explains_when_diff_cannot_be_computed():
+    v = Violation(rule="superseded", doc_id="RG-1.187", revision="1", detail="superseded by Rev 2")
+    s = _t5_store()
+    s.upsert_document(DocumentVersion(doc_id="RG-1.187", revision="1", kind="reg_guide",
+                                      status="superseded", effective_from=date(2000, 1, 1)))
+    s.add_edge(Edge(from_doc="RG-1.187", from_rev="2", to_doc="RG-1.187", to_rev="1",
+                    edge_type="full", valid_from=date(2020, 7, 7), evidence="x", confidence="explicit"))
+    out = abstention_text(_t5_index(), s, [v], date(2026, 11, 15))   # no text indexed for a reg guide
+    assert "[superseded] superseded by Rev 2" in out and "RG-1.187@2" in out
+
+    class Boom:
+        def chunks_for(self, key):
+            raise RuntimeError("chroma down")
+    out = abstention_text(Boom(), _t5_store(), [_V2025], date(2001, 4, 1))
+    assert "[not_governing_on_as_of]" in out and "10CFR50.59@2001-03-13" in out

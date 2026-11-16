@@ -1,13 +1,17 @@
 """Paragraph extraction on verbatim chunk text read from the Chroma index (10CFR50.59@1996-08-28)."""
 
+import time
 from datetime import date
+from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 from kanon.diff import (DiffResult, Paragraph, designator_from_section, diff_as_of, diff_paragraphs,
                         format_diff, normalize, paragraphs, section_region)
 from kanon.ingest import Chunk
 from kanon.store import AuthorityStore, DocumentVersion, Edge
+from kanon.tools import DIFF_TIMEOUT_S, make_tools, run_with_budget
 
 R1996 = (
     "[27 FR 12186, Dec. 8, 1962, as amended at 35 FR 11461, July 17, 1970]\n"
@@ -251,3 +255,33 @@ def test_designator_from_section_fails_closed():
 def test_designator_from_section_rejects_trailing_or_embedded_text():
     for bad in ["§ 50.59(a)(2) and (b)", "see (a)(2)", "50.59(a)(2) text", "(a)(2", "()", "50.59 (a)"]:
         assert designator_from_section(bad) is None
+
+
+def _result(**kw):
+    return DiffResult(doc_id="10CFR50.59", from_as_of=date(2000, 6, 1), to_as_of=date(2026, 11, 15),
+                      from_revisions=["1996-08-28"], to_revisions=["2025-01-29"], **kw)
+
+
+def test_run_with_budget_returns_a_typed_result_on_timeout():
+    def slow():
+        time.sleep(3)
+        raise AssertionError("should not finish")
+    r = run_with_budget(slow, seconds=1)          # no raise into the graph
+    assert any("diff timed out after 1s" in n for n in r.notes)
+    assert (r.gone, r.added, r.changed) == ([], [], [])
+
+
+def test_run_with_budget_passes_the_result_through():
+    one = _result(gone=[Paragraph(key="(a)(2)", text="x", page=1, doc_id="10CFR50.59", revision="1996-08-28")])
+    assert [g.key for g in run_with_budget(lambda: one, seconds=10).gone] == ["(a)(2)"]
+
+
+def test_run_with_budget_default_is_ten_seconds():
+    assert DIFF_TIMEOUT_S == 10
+
+
+def test_diff_revisions_tool_requires_both_dates():
+    tool = next(t for t in make_tools(SimpleNamespace(), AuthorityStore(), "graph")
+                if t.name == "diff_revisions")
+    with pytest.raises(ValidationError):
+        tool.invoke({"doc_id": "10CFR50.59", "as_of_from": "2000-06-01"})
