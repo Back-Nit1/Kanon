@@ -40,7 +40,7 @@ coverage_notes:
   - "Effective date BEFORE issue date (the case the spec names): no instance exists. ACCESS_REPORT says 'none found', and EVALUATION 4.2 H confirms that no row has effective_from < issue_date."
   - "Conflict window, a fourth real pattern: the index dates the incorporation into the successor earlier than the formal withdrawal (RG 1.85: 06/2003 vs 2004-06-18; RG 1.182: 05/2012 vs 2012-11-27). Inside the window the resolver reports the authority as UNRESOLVED and the correct output is abstention (r10, r12)."
   - "Anchor (EA-98-155, April 1996): the earliest recorded 50.59 version (M1) took effect 1996-08-28, and the 1996 CFR edition is not on GovInfo, so q02 expects abstention. M1's text for (a)-(c) did govern in April 1996, but recording that needs a pre-1996 version row."
-  - "FitzPatrick MP-033.05 Rev 28 (ML22027A362): not included. The report's bytes could not be downloaded (HTTP 403), and MP-033.05 itself is not public (ACCESS_REPORT rows A, H)."
+  - "FitzPatrick inspection report ML22027A362 is in the manifest (Internet Archive capture; nrc.gov returned 403, see its notes field). The procedure it names, MP-033.05 Rev 28, is not public and is not in the corpus (ACCESS_REPORT rows A, H)."
   - "FR PDFs carry first- and last-page bleed from other agencies' documents. No answer here depends on those pages: the 50.59 instructions cited are on interior pages, as given in each manifest row's notes."
   - "Discriminating QA questions: 14 (q02-q14, q24), all about one regulation and one mechanism (point-in-time lookup). That is enough for a demonstration, not for statistically meaningful retrieval metrics (EVALUATION 4.3). In mode graph the pre-filter leaves one 50.59 version, so graph recall is close to trivially high."
 
