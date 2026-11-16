@@ -26,14 +26,19 @@ import threading
 import time
 from collections import deque
 
+from langchain_core.rate_limiters import BaseRateLimiter
+
 
 class BudgetExceeded(RuntimeError):
     """The process asked for more model requests than its budget allows."""
 
 
-class SlidingWindow:
-    """Fixed sliding window + lifetime budget. Implements langchain's BaseRateLimiter protocol
-    (`acquire(blocking=...)`), so it can be handed straight to `init_chat_model`."""
+class SlidingWindow(BaseRateLimiter):
+    """Fixed sliding window + lifetime budget.
+
+    Subclasses langchain's `BaseRateLimiter` rather than merely matching its shape: a chat model
+    is a pydantic model and validates the `rate_limiter` field with `isinstance`, so a duck-typed
+    limiter is rejected at construction."""
 
     def __init__(self, limit: int, window: float = 60.0, budget: int = 0,
                  clock=time.monotonic, sleep=time.sleep):

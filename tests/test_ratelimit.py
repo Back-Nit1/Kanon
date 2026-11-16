@@ -24,6 +24,14 @@ def window(limit=3, window=60.0, budget=0):
     return SlidingWindow(limit=limit, window=window, budget=budget, clock=c, sleep=c.sleep), c
 
 
+def test_the_limiter_is_a_langchain_rate_limiter():
+    """A chat model validates this field with isinstance, so matching the shape is not enough —
+    duck typing here fails at construction, after the run has already started."""
+    from langchain_core.rate_limiters import BaseRateLimiter
+    w, _ = window()
+    assert isinstance(w, BaseRateLimiter)
+
+
 def test_requests_under_the_limit_never_wait():
     w, c = window(limit=3)
     for _ in range(3):
