@@ -54,7 +54,8 @@ class QueryClass(BaseModel):
                     "year is given, use the first day of that period. Null for current.")
     needs_requirements: bool = Field(
         default=True,
-        description="True when the question asks what governs, permits, requires, or approves an action.")
+        description="True when the question asks what governs, permits, requires, or approves an action. "
+                    "False when it only asks whether an event, violation or citation occurred.")
     plant: str | None = Field(default=None, description="Plant/facility named by the user, if any.")
     unit: str | None = Field(default=None, description="Unit number named by the user, if any.")
     docket: str | None = Field(default=None, description="NRC docket identifier named by the user, if any.")
@@ -138,11 +139,26 @@ _REQUIREMENT_INTENT = re.compile(
     r"10\s*CFR|regulatory\s+guide|\bRG\s*\d|procedure|technical\s+specification)\b")
 
 
+# A question that only asks whether something happened ("has a licensee been cited ...") is
+# answered from records, so requiring a governing-requirement citation would abstain on a correct
+# answer (eval q23). It applies only when the question has no requirement wording of its own.
+# Rejected: dropping the `10 CFR` trigger above: it flips 13 of 19 eval questions, including
+# time-anchored ones where the requirement check is exactly what we want.
+_PRECEDENT_ONLY = re.compile(r"(?i)\b(been\s+cited|cited\s+for|violations?|incidents?|has\s+(?:a|any)\s+licensee)\b")
+_STRONG_REQUIREMENT = re.compile(r"(?i)\b(govern(?:s|ing|ed)?|requirements?|required|must|permit(?:ted)?|approv\w*)\b")
+
+
+def _needs_requirements(question: str, model_says: bool) -> bool:
+    if _PRECEDENT_ONLY.search(question) and not _STRONG_REQUIREMENT.search(question):
+        return False
+    return model_says or bool(_REQUIREMENT_INTENT.search(question))
+
+
 def _question_controls(question: str, qc: QueryClass) -> dict:
     """Controls derived before tool selection; explicit identifiers cannot be dropped by it."""
     unit = (m.group(1) if (m := _UNIT_IN_QUESTION.search(question)) else None) or qc.unit
     docket = (m.group(1) if (m := _DOCKET_IN_QUESTION.search(question)) else None) or qc.docket
-    return {"needs_requirements": qc.needs_requirements or bool(_REQUIREMENT_INTENT.search(question)),
+    return {"needs_requirements": _needs_requirements(question, qc.needs_requirements),
             "plant": qc.plant, "unit": unit, "docket": docket}
 
 
