@@ -18,10 +18,13 @@ Fusion: reciprocal rank fusion of BM25 and dense, written out below (6 lines) ra
   BM25 matters here because regulatory text is full of exact identifiers ("50.59", "RG 1.187",
   "MP-033.05") that dense embeddings blur together.
 
-Reranking: deliberately omitted in v1. A reranker scores topical relevance, and a superseded
-  revision is topically near-identical to the current one — orthogonal to the thesis. If one is
-  added (BAAI/bge-reranker-v2-m3), it must also be tested in mode 'none': the hypothesis is that
-  better relevance ranking *raises* the superseded-citation rate.
+Reranking: a cross-encoder stage exists (kanon.rerank) but is OFF unless KANON_RERANK_MODEL is
+  set. It is what the metadata pre-filtering below pays for: filters cut the universe, the two
+  cheap rankers fuse to RERANK_CANDIDATES, and only then does the expensive model score pairs to
+  pick the final k. It stays off by default because a reranker scores topical relevance and a
+  superseded revision is topically near-identical to the current one — so it must be A/B'd in
+  mode 'none' (`kanon-eval --rerank`): the hypothesis is that better relevance ranking *raises*
+  the superseded-citation rate.
 
 Modes (the central comparison):
   none  — hot + cold, no authority filtering. Baseline.
@@ -33,6 +36,7 @@ Modes (the central comparison):
 
 import math
 import re
+from collections.abc import Callable
 from datetime import date
 from typing import Literal
 from urllib.parse import urlparse
@@ -70,6 +74,13 @@ def open_chroma(s) -> chromadb.ClientAPI:
 
 RRF_K = 60          # standard constant from Cormack et al. 2009; dampens the top ranks' dominance
 CANDIDATES = 50     # per-retriever depth before fusion
+# Cross-encoder input depth. With a reranker attached, fusion keeps this many candidates instead
+# of k. 100 is the ceiling the budget above can actually fill (50 dense + 50 BM25 per tier), and
+# cross-encoder cost is linear in it: ~100 pairs per search, not the whole collection.
+RERANK_CANDIDATES = 100
+
+# (query, chunks) -> chunks reordered, best first. Implemented by kanon.rerank.CrossEncoderReranker.
+Reranker = Callable[[str, list[Chunk]], list[Chunk]]
 
 # Keep dotted identifiers whole: "50.59", "1.187", "033.05". Default \w+ would split them into
 # meaningless digit fragments and BM25 would lose its main advantage on this corpus.
@@ -90,10 +101,11 @@ def rrf(rankings: list[list[str]], k: int = RRF_K) -> dict[str, float]:
 
 class CorpusIndex:
     def __init__(self, client: chromadb.ClientAPI, embedder: Embeddings, store: AuthorityStore,
-                 expected_dim: int | None = None):
+                 expected_dim: int | None = None, reranker: Reranker | None = None):
         self.embedder = embedder
         self.store = store
         self.expected_dim = expected_dim
+        self.reranker = reranker
         cosine = {"hnsw": {"space": "cosine"}}
         self.hot = client.get_or_create_collection("kanon_hot", configuration=cosine)
         self.cold = client.get_or_create_collection("kanon_cold", configuration=cosine)
@@ -223,8 +235,15 @@ class CorpusIndex:
             found.update({i: (t, m) for i, t, m in zip(ids, dense["documents"][0], dense["metadatas"][0])})
             with span("bm25.rank", col=col.name):
                 rankings.append(self._bm25_rank(col, query, allowed, precedent, found, eligible))
-        fused = sorted(rrf(rankings).items(), key=lambda kv: kv[1], reverse=True)[:k]
-        return [Chunk.from_chroma(i, *found[i], score=s) for i, s in fused]
+        # With a reranker, fusion is a recall stage: keep a deep pool and let the cross-encoder
+        # pick the k that generation sees. Without one, fusion is the final ranking.
+        depth = k if self.reranker is None else max(k, RERANK_CANDIDATES)
+        fused = sorted(rrf(rankings).items(), key=lambda kv: kv[1], reverse=True)[:depth]
+        hits = [Chunk.from_chroma(i, *found[i], score=s) for i, s in fused]
+        if self.reranker is None:
+            return hits
+        with span("rerank", n=len(hits)):
+            return self.reranker(query, hits)[:k]
 
     def _bm25_rank(self, col, query: str, allowed: set[str] | None, precedent: bool,
                    found: dict, eligible: set[str]) -> list[str]:

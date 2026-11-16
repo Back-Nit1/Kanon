@@ -271,6 +271,31 @@ questions:
     assert "flag (status column today): 0/1 correct" in report
 
 
+def test_run_measures_every_mode_with_and_without_the_reranker(tmp_path):
+    st, idx = world()
+    qfile = tmp_path / "questions.yaml"
+    qfile.write_text(f"""today: {TODAY}
+questions:
+  - id: past
+    category: effective_before_issue
+    query_kind: time_anchored
+    as_of: 2005-06-01
+    question: "pump replacement evaluation in 2005"
+    expected: ["DOC-A@0"]
+""")
+    calls = []
+
+    def fake_rerank(query, chunks):
+        calls.append(query)
+        return list(reversed(chunks))
+
+    res = evals.run(idx, st, qfile, k=5, modes=("none",), rerank=fake_rerank)
+    assert set(res["retrieval"]) == {"none", "none+rerank"} and res["reranked"]
+    assert len(calls) == 1                  # baseline pass runs un-reranked, rerank pass once
+    assert idx.reranker is None             # the shared index is left as it was found
+    assert "`<mode>+rerank`" in evals.render_report(res)
+
+
 def test_report_says_so_when_no_thesis_case_exists(tmp_path):
     res = {"questions_file": "q", "questions_sha256": "0" * 64, "today": "2026-01-01", "k": 5,
            "n_questions": 1, "categories": {"partial": 1}, "generation": None,

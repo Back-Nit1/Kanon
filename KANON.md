@@ -171,7 +171,14 @@ in the code; they are as much the deliverable as the implementation.
   on this corpus is a genuinely interesting result. Note it's a SPLADE-style
   sparse model, so it needs its own integration path — treat as v2.
 
-## Reranking: **omit from v1; if added, test it in the baseline too**
+## Reranking: **implemented but off by default; A/B it in the baseline**
+
+> **Status (v1):** built as `kanon/rerank.py` (`CrossEncoderReranker`, BGE via `transformers` —
+> `torch`/`transformers` already ship with docling, so no new dependency). Wired into
+> `CorpusIndex._hybrid`: with a reranker attached, RRF becomes a recall stage that keeps
+> `RERANK_CANDIDATES = 100` metadata-pre-filtered candidates and the cross-encoder picks the
+> final k. **Off unless `KANON_RERANK_MODEL` is set**, for the reason below. `kanon-eval --rerank`
+> measures every requested mode twice (`<mode>` and `<mode>+rerank`) through the production path.
 
 - **Reasoning:** reranking is the single largest quality gain available in a RAG
   stack short of a model upgrade (published figures: 15–25 points of top-1

@@ -80,8 +80,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     from kanon.llm import embeddings
+    from kanon.rerank import load_reranker
     from kanon.retrieval import CorpusIndex, open_chroma
-    index = CorpusIndex(open_chroma(s), embeddings(s), store, expected_dim=s.embedding_dim)
+    index = CorpusIndex(open_chroma(s), embeddings(s), store, expected_dim=s.embedding_dim,
+                        reranker=load_reranker(s))
 
     if args.cmd in ("ingest", "worker"):
         from docling.chunking import HybridChunker

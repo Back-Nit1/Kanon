@@ -3,6 +3,8 @@
     uv run kanon-eval                    # retrieval metrics + full agent runs, all three modes
     uv run kanon-eval --retrieval-only   # no chat model needed (still needs the embedder)
     uv run kanon-eval --judge            # also append Tier C annotations to every trace
+    uv run kanon-eval --modes none --rerank   # the KANON.md A/B: baseline with and without the
+                                              # cross-encoder reranker, retrieval and generation
 
 Three levels, kept separate on purpose (never pooled into one number):
   - Retrieval (CorpusIndex.search per mode, no LLM): recall@k, MRR, and superseded-chunk rate —
@@ -34,7 +36,6 @@ import hashlib
 import json
 import os
 import sys
-from collections.abc import Callable
 from datetime import date
 from pathlib import Path
 from typing import Literal
@@ -43,7 +44,7 @@ import yaml
 from pydantic import BaseModel
 
 from kanon.ingest import Chunk
-from kanon.retrieval import CorpusIndex, is_record
+from kanon.retrieval import CorpusIndex, Reranker, is_record
 from kanon.store import AuthorityStore
 from kanon.timing import QuestionTimeout, deadline, set_context, span
 
@@ -148,25 +149,22 @@ def summarise_retrieval(rows: list[dict]) -> dict:
             "retrieved_chunks": retrieved}
 
 
-# Hook for the optional "mode none with/without reranker" run (KANON.md, Reranking). Not
-# implemented: BAAI/bge-reranker-v2-m3 needs a 0.6B local model and a new dependency, and the
-# result doesn't touch the thesis. If added: pass a function (query, chunks) -> reordered chunks.
+# The reranker A/B (KANON.md, Reranking) runs through `index.reranker`, i.e. the production path,
+# not a parallel eval-only code path — see `run(rerank=...)`. `label` only names the row group in
+# the report and traces ("none" vs "none+rerank"); `mode` is still the authority mode.
 # Never compare raw reranker scores across models (BGE sigmoid vs Cohere vs ColBERT MaxSim live on
 # different scales) — compare only the metrics below.
-Reranker = Callable[[str, list[Chunk]], list[Chunk]]
 
 
 def retrieval_eval(index: CorpusIndex, store: AuthorityStore, today: date,
                    questions: list[Question], mode: str, k: int,
-                   rerank: Reranker | None = None) -> list[dict]:
+                   label: str | None = None) -> list[dict]:
     rows = []
     for q in questions:
         as_of = q.authority_date(today)
-        set_context(phase="retrieval", mode=mode, qid=q.id)
+        set_context(phase="retrieval", mode=label or mode, qid=q.id)
         with span("eval.retrieval_question"):
-            chunks = index.search(q.question, k if rerank is None else 3 * k, mode, as_of)
-        if rerank is not None:
-            chunks = rerank(q.question, chunks)[:k]
+            chunks = index.search(q.question, k, mode, as_of)
         rows.append(retrieval_row(q, chunks, store, as_of))
     return rows
 
@@ -212,14 +210,15 @@ def pair(s: dict) -> str:
 def generation_eval(llm, index: CorpusIndex, store: AuthorityStore, today: date,
                     questions: list[Question], mode: str, trace_dir: Path,
                     judge_llm=None, judge_model: str = "",
-                    question_timeout: float | None = None) -> list[dict]:
+                    question_timeout: float | None = None,
+                    label: str | None = None) -> list[dict]:
     from kanon.agent import build_agent
     from kanon.trace import TraceRecorder
     agent = build_agent(llm, index, store, mode)
     rows = []
     for q in questions:
         recorder = TraceRecorder()
-        set_context(phase="generation", mode=mode, qid=q.id)
+        set_context(phase="generation", mode=label or mode, qid=q.id)
         try:
             with span("eval.generation_question"), deadline(question_timeout):
                 state = agent.invoke({"question": q.question, "mode": mode, "today": today},
@@ -394,7 +393,11 @@ def render_report(res: dict) -> str:
           "- 'Superseded' is decided by `AuthorityStore.governs` against each question's pinned "
           "as_of — never by a model. Records (operating experience, FR rules and notices) are "
           "exempt: they record what happened, not what governs.",
-          "- Reranker run (mode none ± BAAI/bge-reranker-v2-m3): not run; hook only (`Reranker`).",
+          ("- Reranker: every mode above appears twice, `<mode>` and `<mode>+rerank` "
+           "(cross-encoder over the top ~100 pre-filtered candidates). Compare the pair, not the "
+           "raw reranker scores." if res.get("reranked") else
+           "- Reranker run (`--rerank`, cross-encoder over the top ~100 pre-filtered candidates): "
+           "not run in this pass; off unless KANON_RERANK_MODEL is set."),
           "- Tier C judge annotations, when enabled, are advisory and live in the traces; they "
           "do not feed any metric here. Judge shares a provider with the RAG model by default.", ""]
     return "\n".join(L)
@@ -402,7 +405,13 @@ def render_report(res: dict) -> str:
 
 def run(index: CorpusIndex, store: AuthorityStore, questions_file: Path, k: int,
         modes: tuple[str, ...] = MODES, llm=None, trace_dir: Path | None = None,
-        judge_llm=None, judge_model: str = "", question_timeout: float | None = None) -> dict:
+        judge_llm=None, judge_model: str = "", question_timeout: float | None = None,
+        rerank: Reranker | None = None) -> dict:
+    """With `rerank`, every requested mode is measured twice — `<mode>` and `<mode>+rerank` —
+    because a reranker is only trustworthy here if the paired numbers say so (KANON.md:
+    better topical ranking may *raise* the superseded-citation rate, since a superseded revision
+    is topically near-identical to the current one). Pass `--modes none` to A/B only the baseline.
+    """
     today, questions, sha, notes = load_questions(questions_file)
     problems = check_questions(store, today, questions)
     if problems:   # halt: grading against an underivable expected answer is worse than no grade
@@ -414,15 +423,28 @@ def run(index: CorpusIndex, store: AuthorityStore, questions_file: Path, k: int,
            "categories": {c: sum(q.category == c for q in questions) for c in {q.category for q in questions}},
            "coverage_notes": notes, "retrieval": {}, "generation": None,
            "resolver": {"summary": summarise_resolver(resolver), "rows": resolver}}
-    for m in modes:
-        rows = retrieval_eval(index, store, today, qa, m, k)
-        res["retrieval"][m] = {"summary": summarise_retrieval(rows), "rows": rows}
-    if llm is not None:
-        res["generation"] = {}
-        for m in modes:
-            rows = generation_eval(llm, index, store, today, qa, m, trace_dir,
-                                   judge_llm, judge_model, question_timeout)
-            res["generation"][m] = {"summary": summarise_generation(rows), "rows": rows}
+    # (label, reranker) passes: without first, so the baseline is never measured through a
+    # half-warmed model or a changed candidate depth.
+    passes = [("", None)] + ([("+rerank", rerank)] if rerank is not None else [])
+    res["reranked"] = rerank is not None
+    previous = index.reranker
+    try:
+        for suffix, reranker in passes:
+            index.reranker = reranker
+            for m in modes:
+                rows = retrieval_eval(index, store, today, qa, m, k, label=m + suffix)
+                res["retrieval"][m + suffix] = {"summary": summarise_retrieval(rows), "rows": rows}
+        if llm is not None:
+            res["generation"] = {}
+            for suffix, reranker in passes:
+                index.reranker = reranker
+                for m in modes:
+                    rows = generation_eval(llm, index, store, today, qa, m, trace_dir,
+                                           judge_llm, judge_model, question_timeout,
+                                           label=m + suffix)
+                    res["generation"][m + suffix] = {"summary": summarise_generation(rows), "rows": rows}
+    finally:
+        index.reranker = previous
     res["failure_cases"] = failure_cases(res["retrieval"], res["generation"], resolver)
     return res
 
@@ -435,6 +457,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES))
     p.add_argument("--retrieval-only", action="store_true")
     p.add_argument("--judge", action="store_true", help="append Tier C annotations to traces")
+    p.add_argument("--rerank", nargs="?", const="", default=None, metavar="HF_MODEL",
+                   help="also measure every mode with the cross-encoder reranker "
+                        "(default KANON_RERANK_MODEL, else BAAI/bge-reranker-v2-m3); "
+                        "doubles the run, and with an LLM doubles its cost")
     # Measured on this corpus: a question takes roughly 7-23 s (three sequential reasoning-model
     # calls). 60 s leaves headroom over the slowest seen and still catches a hung request.
     p.add_argument("--question-timeout", type=float,
@@ -452,10 +478,15 @@ def main(argv: list[str] | None = None) -> int:
     if index.hot.count() + index.cold.count() == 0:
         print("index is empty — run `kanon load` and `kanon ingest` first", file=sys.stderr)
         return 1
+    rerank = None
+    if args.rerank is not None:
+        from kanon.rerank import DEFAULT_MODEL, CrossEncoderReranker
+        rerank = CrossEncoderReranker(args.rerank or s.rerank_model or DEFAULT_MODEL)
+        print(f"reranker: {rerank.model} (first search downloads the weights)", file=sys.stderr)
     llm = None if args.retrieval_only else chat_model(s)
     judge_llm = chat_model(s, role="judge") if args.judge and llm else None
     res = run(index, store, args.questions, args.k, tuple(args.modes), llm,
-              s.trace_dir / "eval", judge_llm, s.judge_model, args.question_timeout)
+              s.trace_dir / "eval", judge_llm, s.judge_model, args.question_timeout, rerank)
 
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "results.json").write_text(json.dumps(res, indent=2, default=str))
