@@ -4,8 +4,8 @@
 text{font:12px system-ui,sans-serif;fill:var(--t2)} .t{font-weight:600;font-size:14px;fill:var(--t1)} .v{fill:var(--t1);font-weight:600}
 </style><rect width="600" height="230" fill="var(--bg)"/><text class="t" x="20" y="22">Generation: superseded citations vs answer rate (19 qa questions)</text><text class="t" x="20" y="46">Superseded-citation rate</text><text x="20" y="64">lower is better</text>
 <line x1="20" x2="270" y1="190" y2="190" stroke="var(--grid)"/>
-<path d="M32,190 V152.31578947368422 Q32,148.31578947368422 36,148.31578947368422 H76 Q80,148.31578947368422 80,152.31578947368422 V190 Z" fill="var(--none)"/>
-<text class="v" x="56" y="142.31578947368422" text-anchor="middle">47%</text>
+<path d="M32,190 V168.11764705882354 Q32,164.11764705882354 36,164.11764705882354 H76 Q80,164.11764705882354 80,168.11764705882354 V190 Z" fill="var(--none)"/>
+<text class="v" x="56" y="158.11764705882354" text-anchor="middle">29%</text>
 <text x="56" y="208" text-anchor="middle">none</text>
 <path d="M112,190 V138.42105263157896 Q112,134.42105263157896 116,134.42105263157896 H156 Q160,134.42105263157896 160,138.42105263157896 V190 Z" fill="var(--flag)"/>
 <text class="v" x="136" y="128.42105263157896" text-anchor="middle">63%</text>
@@ -13,12 +13,12 @@ text{font:12px system-ui,sans-serif;fill:var(--t2)} .t{font-weight:600;font-size
 <text class="v" x="216" y="184.0" text-anchor="middle">0%</text>
 <text x="216" y="208" text-anchor="middle">graph</text><text class="t" x="320" y="46">Answer rate</text><text x="320" y="64">higher is NOT better on its own</text>
 <line x1="320" x2="570" y1="190" y2="190" stroke="var(--grid)"/>
-<path d="M332,190 V106.0 Q332,102.0 336,102.0 H376 Q380,102.0 380,106.0 V190 Z" fill="var(--none)"/>
-<text class="v" x="356" y="96.0" text-anchor="middle">100%</text>
+<path d="M332,190 V115.26315789473684 Q332,111.26315789473684 336,111.26315789473684 H376 Q380,111.26315789473684 380,115.26315789473684 V190 Z" fill="var(--none)"/>
+<text class="v" x="356" y="105.26315789473684" text-anchor="middle">89%</text>
 <text x="356" y="208" text-anchor="middle">none</text>
 <path d="M412,190 V106.0 Q412,102.0 416,102.0 H456 Q460,102.0 460,106.0 V190 Z" fill="var(--flag)"/>
 <text class="v" x="436" y="96.0" text-anchor="middle">100%</text>
 <text x="436" y="208" text-anchor="middle">flag</text>
-<path d="M492,190 V110.63157894736842 Q492,106.63157894736842 496,106.63157894736842 H536 Q540,106.63157894736842 540,110.63157894736842 V190 Z" fill="var(--graph)"/>
-<text class="v" x="516" y="100.63157894736842" text-anchor="middle">95%</text>
+<path d="M492,190 V129.1578947368421 Q492,125.15789473684211 496,125.15789473684211 H536 Q540,125.15789473684211 540,129.1578947368421 V190 Z" fill="var(--graph)"/>
+<text class="v" x="516" y="119.15789473684211" text-anchor="middle">74%</text>
 <text x="516" y="208" text-anchor="middle">graph</text></svg>

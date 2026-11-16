@@ -7,13 +7,15 @@
 
 | mode | superseded-citation rate | answer rate | answered | cites an expected doc (of answered) |
 |---|---|---|---|---|
-| none | 47% | 100% | 19/19 | 58% |
-| flag | 63% | 100% | 19/19 | 32% |
-| graph | 0% | 95% | 18/19 | 100% |
+| none | 29% | 89% | 17/19 | 76% |
+| flag | 63% | 100% | 19/19 | 26% |
+| graph | 0% | 74% | 14/19 | 100% |
 
-- `none`: superseded-citation rate 47% @ answer rate 100% (19/19 answered)
+- `none`: superseded-citation rate 29% @ answer rate 89% (17/19 answered)
 - `flag`: superseded-citation rate 63% @ answer rate 100% (19/19 answered)
-- `graph`: superseded-citation rate 0% @ answer rate 95% (18/19 answered)
+- `graph`: superseded-citation rate 0% @ answer rate 74% (14/19 answered, 2 FAILED)
+
+**Some questions timed out or failed.** Neither is an abstention; those rows have no answer and no gate decision, and are excluded from named failure cases. A failed row means the provider or the stack errored, not that the system refused.
 
 ## Retrieval (no LLM)
 
@@ -66,9 +68,8 @@ Recall@k and MRR are over the questions with a non-empty expected set; supersede
 - effective date after issue date (not the spec's named case): **q11** (retrieval) — flag: recall 0.00, 5 non-governing chunks; graph: recall 1.00, 0 non-governing chunks
 - effective date after issue date (not the spec's named case): **q12** (retrieval) — flag: recall 0.00, 5 non-governing chunks; graph: recall 1.00, 0 non-governing chunks
 - effective date after issue date (not the spec's named case): **q13** (retrieval) — flag: recall 0.00, 5 non-governing chunks; graph: recall 1.00, 0 non-governing chunks
-- effective date after issue date (not the spec's named case): **q04** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@1996-08-28 p.1']
-- effective date after issue date (not the spec's named case): **q05** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@1996-08-28 p.2']
-- effective date after issue date (not the spec's named case): **q06** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@2001-03-13 p.1', '10CFR50.59@2001-03-13 p.2']
+- effective date after issue date (not the spec's named case): **q05** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@1996-08-28 p.2', '10CFR50.59@1996-08-28 p.2']
+- effective date after issue date (not the spec's named case): **q06** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@2001-03-13 p.1', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2']
 - effective date after issue date (not the spec's named case): **q11** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@2007-09-27 p.1']
 - effective date after issue date (not the spec's named case): **q12** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@2024-08-15 p.1']
 - effective date after issue date (not the spec's named case): **q13** (generation) — flag: answer, cited ['10CFR50.59@2025-01-29 p.1']; graph: answer, cited ['10CFR50.59@2024-08-15 p.1']
@@ -109,5 +110,5 @@ Other categories (`flag` only knows what is active today, so any past as_of can 
 ## Notes
 
 - 'Superseded' is decided by `AuthorityStore.governs` against each question's pinned as_of — never by a model. Records (operating experience, FR rules and notices) are exempt: they record what happened, not what governs.
-- Reranker run (mode none ± BAAI/bge-reranker-v2-m3): not run; hook only (`Reranker`).
+- Reranker run (`--rerank`, cross-encoder over the top ~100 pre-filtered candidates): not run in this pass; off unless KANON_RERANK_MODEL is set.
 - Tier C judge annotations, when enabled, are advisory and live in the traces; they do not feed any metric here. Judge shares a provider with the RAG model by default.

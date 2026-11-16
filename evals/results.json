@@ -7,12 +7,12 @@
   "n_qa": 19,
   "n_resolver": 13,
   "categories": {
-    "time_anchored": 10,
-    "control": 6,
     "cross_family": 6,
-    "anchor": 1,
+    "time_anchored": 10,
+    "conflict_window": 2,
     "effective_after_issue": 7,
-    "conflict_window": 2
+    "anchor": 1,
+    "control": 6
   },
   "coverage_notes": [
     "Effective date AFTER issue date: real and tested. (1) The 1999 rewrite of 10 CFR 50.59 was published 1999-10-04 but took effect 2001-03-13, a date set by a different document (M8, E2, E4, E6): q04, q05, q06. (2) The 2024 and 2025 amendments each took effect 30 days after publication (M12, M13): q11, q12, q13. (3) RG 1.187 Rev 2 is dated 06/2020 in the index, but 'takes effect on July 7, 2020' (E33): resolver r03 (metadata only, no guide text).",
@@ -943,11 +943,12 @@
     "none": {
       "summary": {
         "questions": 19,
-        "answered": 19,
+        "answered": 17,
         "timed_out": 0,
-        "answer_rate": 1.0,
-        "superseded_citation_rate": 0.47368421052631576,
-        "cites_expected_rate": 0.5789473684210527
+        "errored": 0,
+        "answer_rate": 0.8947368421052632,
+        "superseded_citation_rate": 0.29411764705882354,
+        "cites_expected_rate": 0.7647058823529411
       },
       "rows": [
         {
@@ -959,12 +960,23 @@
           "cites_expected": true,
           "citations": [
             "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "EA-98-155@0 p.1",
+            "EA-98-155@0 p.1",
             "EA-98-155@0 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q01/20261116T021349Z-607815-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q01/20261116T060033Z-4065dd-answer.md"
         },
         {
           "id": "q02",
@@ -976,6 +988,7 @@
           "citations": [
             "10CFR50.59@1996-08-28 p.1",
             "10CFR50.59@1996-08-28 p.2",
+            "EA-98-155@0 p.1",
             "EA-98-155@0 p.1"
           ],
           "model_as_of": "1996-04-01",
@@ -984,22 +997,22 @@
             "not_governing_on_as_of",
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q02/20261116T021411Z-23cd5c-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q02/20261116T060058Z-6b3786-answer.md"
         },
         {
           "id": "q03",
           "category": "time_anchored",
-          "decision": "answer",
+          "decision": "abstain",
           "expect_abstain": false,
           "superseded": false,
-          "cites_expected": true,
-          "citations": [
-            "10CFR50.59@1996-08-28 p.1"
-          ],
+          "cites_expected": false,
+          "citations": [],
           "model_as_of": "1998-05-01",
           "as_of_mismatch": true,
-          "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q03/20261116T021425Z-87d6c6-answer.md"
+          "violations": [
+            "paragraph_not_in_revision"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q03/20261116T060114Z-fa4007-abstain.md"
         },
         {
           "id": "q14",
@@ -1014,25 +1027,23 @@
           "model_as_of": "1997-01-01",
           "as_of_mismatch": true,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q14/20261116T021436Z-e87380-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q14/20261116T060124Z-44e7ac-answer.md"
         },
         {
           "id": "q04",
           "category": "effective_after_issue",
-          "decision": "answer",
+          "decision": "abstain",
           "expect_abstain": false,
-          "superseded": true,
-          "cites_expected": true,
-          "citations": [
-            "10CFR50.59@1996-08-28 p.1",
-            "10CFR50.59@2001-03-13 p.2"
-          ],
+          "superseded": false,
+          "cites_expected": false,
+          "citations": [],
           "model_as_of": "2000-06-01",
           "as_of_mismatch": false,
           "violations": [
+            "paragraph_not_in_revision",
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q04/20261116T021446Z-a3fadc-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q04/20261116T060137Z-f7189b-abstain.md"
         },
         {
           "id": "q05",
@@ -1042,12 +1053,13 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
+            "10CFR50.59@1996-08-28 p.2",
             "10CFR50.59@1996-08-28 p.2"
           ],
           "model_as_of": "2001-01-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q05/20261116T021457Z-e5a62a-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q05/20261116T060154Z-7b83e7-answer.md"
         },
         {
           "id": "q06",
@@ -1057,12 +1069,18 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
-            "10CFR50.59@2001-03-13 p.1"
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2"
           ],
           "model_as_of": "2001-04-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q06/20261116T021509Z-7eaafd-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q06/20261116T060209Z-cc3e56-answer.md"
         },
         {
           "id": "q07",
@@ -1070,8 +1088,9 @@
           "decision": "answer",
           "expect_abstain": false,
           "superseded": true,
-          "cites_expected": false,
+          "cites_expected": true,
           "citations": [
+            "10CFR50.59@2001-03-13 p.1",
             "10CFR50.59@2001-12-14 p.1"
           ],
           "model_as_of": "2001-07-01",
@@ -1079,7 +1098,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q07/20261116T021519Z-e5bb7f-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q07/20261116T060225Z-b190df-answer.md"
         },
         {
           "id": "q08",
@@ -1094,26 +1113,22 @@
           "model_as_of": "2001-09-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q08/20261116T021526Z-9d5ef8-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q08/20261116T060235Z-a02adf-answer.md"
         },
         {
           "id": "q09",
           "category": "time_anchored",
           "decision": "answer",
           "expect_abstain": false,
-          "superseded": true,
-          "cites_expected": false,
+          "superseded": false,
+          "cites_expected": true,
           "citations": [
-            "10CFR50.59@2001-03-13 p.1",
-            "10CFR50.59@2007-09-27 p.1"
+            "10CFR50.59@2001-12-14 p.1"
           ],
           "model_as_of": "2005-01-01",
           "as_of_mismatch": false,
-          "violations": [
-            "not_governing_on_as_of",
-            "not_governing_on_as_of"
-          ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q09/20261116T021539Z-24c8fe-answer.md"
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q09/20261116T060241Z-1fb13c-answer.md"
         },
         {
           "id": "q24",
@@ -1130,7 +1145,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q24/20261116T021549Z-cba5a0-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q24/20261116T060251Z-d58646-answer.md"
         },
         {
           "id": "q10",
@@ -1145,7 +1160,7 @@
           "model_as_of": "2010-01-01",
           "as_of_mismatch": true,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q10/20261116T021557Z-df0680-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q10/20261116T060303Z-7efbc4-answer.md"
         },
         {
           "id": "q11",
@@ -1155,8 +1170,8 @@
           "superseded": true,
           "cites_expected": false,
           "citations": [
-            "10CFR50.59@2001-12-14 p.1",
-            "10CFR50.59@2024-08-15 p.1"
+            "10CFR50.59@2024-08-15 p.1",
+            "10CFR50.59@2001-12-14 p.1"
           ],
           "model_as_of": "2024-08-01",
           "as_of_mismatch": false,
@@ -1164,26 +1179,22 @@
             "not_governing_on_as_of",
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q11/20261116T021607Z-949a43-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q11/20261116T060314Z-58b450-answer.md"
         },
         {
           "id": "q12",
           "category": "effective_after_issue",
           "decision": "answer",
           "expect_abstain": false,
-          "superseded": true,
-          "cites_expected": false,
+          "superseded": false,
+          "cites_expected": true,
           "citations": [
-            "10CFR50.59@2001-12-14 p.1",
-            "10CFR50.59@2025-01-29 p.1"
+            "10CFR50.59@2024-08-15 p.1"
           ],
           "model_as_of": "2024-09-01",
           "as_of_mismatch": false,
-          "violations": [
-            "not_governing_on_as_of",
-            "not_governing_on_as_of"
-          ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q12/20261116T021615Z-ea82e2-answer.md"
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q12/20261116T060321Z-2fc034-answer.md"
         },
         {
           "id": "q13",
@@ -1200,7 +1211,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q13/20261116T021627Z-37afed-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q13/20261116T060331Z-a8e4ff-answer.md"
         },
         {
           "id": "q15",
@@ -1215,7 +1226,7 @@
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q15/20261116T021641Z-6c9e23-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q15/20261116T060344Z-03cb89-answer.md"
         },
         {
           "id": "q16",
@@ -1225,29 +1236,37 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
             "10CFR50.59@2025-01-29 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q16/20261116T021655Z-d7f516-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q16/20261116T060358Z-ea6be0-answer.md"
         },
         {
           "id": "q17",
           "category": "control",
           "decision": "answer",
           "expect_abstain": false,
-          "superseded": true,
-          "cites_expected": false,
+          "superseded": false,
+          "cites_expected": true,
           "citations": [
-            "10CFR50.59@2001-03-13 p.2"
+            "FR-66-64737@0 p.1",
+            "10CFR50.59@2025-01-29 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
-          "violations": [
-            "superseded"
-          ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q17/20261116T021709Z-880cb3-answer.md"
+          "violations": [],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q17/20261116T060414Z-9fd921-answer.md"
         },
         {
           "id": "q23",
@@ -1262,7 +1281,7 @@
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q23/20261116T021720Z-762d27-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/none/q23/20261116T060430Z-8ef2fe-answer.md"
         }
       ]
     },
@@ -1271,9 +1290,10 @@
         "questions": 19,
         "answered": 19,
         "timed_out": 0,
+        "errored": 0,
         "answer_rate": 1.0,
         "superseded_citation_rate": 0.631578947368421,
-        "cites_expected_rate": 0.3157894736842105
+        "cites_expected_rate": 0.2631578947368421
       },
       "rows": [
         {
@@ -1285,12 +1305,25 @@
           "cites_expected": true,
           "citations": [
             "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
             "EA-98-155@0 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q01/20261116T021747Z-cc52a6-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q01/20261116T060521Z-35fade-answer.md"
         },
         {
           "id": "q02",
@@ -1307,7 +1340,7 @@
           "violations": [
             "no_requirement_citation"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q02/20261116T021803Z-c53aa8-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q02/20261116T060538Z-04c807-answer.md"
         },
         {
           "id": "q03",
@@ -1315,16 +1348,17 @@
           "decision": "answer",
           "expect_abstain": false,
           "superseded": false,
-          "cites_expected": true,
+          "cites_expected": false,
           "citations": [
-            "EA-98-155@0 p.1"
+            "FR-61-39278@0 p.5",
+            "FR-64-53582@0 p.3"
           ],
           "model_as_of": "1998-05-01",
           "as_of_mismatch": true,
           "violations": [
             "no_requirement_citation"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q03/20261116T021815Z-9dc956-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q03/20261116T060554Z-18b6b3-answer.md"
         },
         {
           "id": "q14",
@@ -1341,7 +1375,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q14/20261116T021823Z-c90a2c-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q14/20261116T060606Z-828341-answer.md"
         },
         {
           "id": "q04",
@@ -1358,7 +1392,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q04/20261116T021835Z-dee417-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q04/20261116T060618Z-7f29e7-answer.md"
         },
         {
           "id": "q05",
@@ -1375,7 +1409,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q05/20261116T021844Z-5ce188-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q05/20261116T060631Z-db03f8-answer.md"
         },
         {
           "id": "q06",
@@ -1392,7 +1426,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q06/20261116T021854Z-c49a1f-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q06/20261116T060644Z-5733ae-answer.md"
         },
         {
           "id": "q07",
@@ -1409,7 +1443,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q07/20261116T021905Z-4799ec-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q07/20261116T060653Z-26b2c7-answer.md"
         },
         {
           "id": "q08",
@@ -1426,7 +1460,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q08/20261116T021913Z-cd1a66-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q08/20261116T060702Z-eeba11-answer.md"
         },
         {
           "id": "q09",
@@ -1443,7 +1477,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q09/20261116T021922Z-46c54a-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q09/20261116T060713Z-ea888a-answer.md"
         },
         {
           "id": "q24",
@@ -1460,7 +1494,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q24/20261116T021931Z-3c88c6-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q24/20261116T060723Z-2c2609-answer.md"
         },
         {
           "id": "q10",
@@ -1477,7 +1511,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q10/20261116T021940Z-fb2249-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q10/20261116T060733Z-b253c8-answer.md"
         },
         {
           "id": "q11",
@@ -1494,7 +1528,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q11/20261116T021949Z-276cfa-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q11/20261116T060743Z-ae2ebc-answer.md"
         },
         {
           "id": "q12",
@@ -1511,7 +1545,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q12/20261116T021958Z-463abf-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q12/20261116T060751Z-35f174-answer.md"
         },
         {
           "id": "q13",
@@ -1528,7 +1562,7 @@
           "violations": [
             "not_governing_on_as_of"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q13/20261116T022006Z-1956be-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q13/20261116T060801Z-d90c6d-answer.md"
         },
         {
           "id": "q15",
@@ -1538,12 +1572,14 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
             "10CFR50.59@2025-01-29 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q15/20261116T022017Z-1053bf-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q15/20261116T060814Z-40f0bd-answer.md"
         },
         {
           "id": "q16",
@@ -1553,12 +1589,24 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
             "10CFR50.59@2025-01-29 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q16/20261116T022029Z-5ac348-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q16/20261116T060835Z-fdd07b-answer.md"
         },
         {
           "id": "q17",
@@ -1573,7 +1621,7 @@
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q17/20261116T022037Z-9c3602-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q17/20261116T060844Z-3cf08f-answer.md"
         },
         {
           "id": "q23",
@@ -1588,16 +1636,17 @@
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q23/20261116T022050Z-527081-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/flag/q23/20261116T060900Z-ef6ff1-answer.md"
         }
       ]
     },
     "graph": {
       "summary": {
         "questions": 19,
-        "answered": 18,
+        "answered": 14,
         "timed_out": 0,
-        "answer_rate": 0.9473684210526315,
+        "errored": 2,
+        "answer_rate": 0.7368421052631579,
         "superseded_citation_rate": 0.0,
         "cites_expected_rate": 1.0
       },
@@ -1611,12 +1660,20 @@
           "cites_expected": true,
           "citations": [
             "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
             "EA-98-155@0 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q01/20261116T022112Z-1f1cd9-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q01/20261116T060943Z-2636b3-answer.md"
         },
         {
           "id": "q02",
@@ -1632,23 +1689,22 @@
             "no_governing_requirement",
             "no_requirement_citation"
           ],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q02/20261116T022128Z-d17198-abstain.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q02/20261116T061004Z-068092-abstain.md"
         },
         {
           "id": "q03",
           "category": "time_anchored",
-          "decision": "answer",
+          "decision": "abstain",
           "expect_abstain": false,
           "superseded": false,
-          "cites_expected": true,
-          "citations": [
-            "10CFR50.59@1996-08-28 p.1",
-            "10CFR50.59@1996-08-28 p.2"
-          ],
+          "cites_expected": false,
+          "citations": [],
           "model_as_of": "1998-05-01",
           "as_of_mismatch": true,
-          "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q03/20261116T022144Z-c24704-answer.md"
+          "violations": [
+            "paragraph_not_in_revision"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q03/20261116T061021Z-27963a-abstain.md"
         },
         {
           "id": "q14",
@@ -1663,22 +1719,22 @@
           "model_as_of": "1997-01-01",
           "as_of_mismatch": true,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q14/20261116T022153Z-7dbd3c-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q14/20261116T061030Z-5b656a-answer.md"
         },
         {
           "id": "q04",
           "category": "effective_after_issue",
-          "decision": "answer",
+          "decision": "abstain",
           "expect_abstain": false,
           "superseded": false,
-          "cites_expected": true,
-          "citations": [
-            "10CFR50.59@1996-08-28 p.1"
-          ],
+          "cites_expected": false,
+          "citations": [],
           "model_as_of": "2000-06-01",
           "as_of_mismatch": false,
-          "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q04/20261116T022204Z-f27a0c-answer.md"
+          "violations": [
+            "paragraph_not_in_revision"
+          ],
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q04/20261116T061044Z-054dfb-abstain.md"
         },
         {
           "id": "q05",
@@ -1688,12 +1744,13 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
+            "10CFR50.59@1996-08-28 p.2",
             "10CFR50.59@1996-08-28 p.2"
           ],
           "model_as_of": "2001-01-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q05/20261116T022215Z-abb920-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q05/20261116T061101Z-610ac0-answer.md"
         },
         {
           "id": "q06",
@@ -1704,12 +1761,21 @@
           "cites_expected": true,
           "citations": [
             "10CFR50.59@2001-03-13 p.1",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
+            "10CFR50.59@2001-03-13 p.2",
             "10CFR50.59@2001-03-13 p.2"
           ],
           "model_as_of": "2001-04-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q06/20261116T022227Z-bf8c7f-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q06/20261116T061119Z-4d95fd-answer.md"
         },
         {
           "id": "q07",
@@ -1721,10 +1787,10 @@
           "citations": [
             "10CFR50.59@2001-03-13 p.1"
           ],
-          "model_as_of": "2001-07-01",
-          "as_of_mismatch": true,
+          "model_as_of": "2001-06-01",
+          "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q07/20261116T022235Z-48639b-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q07/20261116T061128Z-d7b640-answer.md"
         },
         {
           "id": "q08",
@@ -1739,7 +1805,7 @@
           "model_as_of": "2001-09-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q08/20261116T022241Z-8f7670-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q08/20261116T061135Z-eb3182-answer.md"
         },
         {
           "id": "q09",
@@ -1754,7 +1820,7 @@
           "model_as_of": "2005-01-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q09/20261116T022248Z-d6c568-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q09/20261116T061143Z-c77854-answer.md"
         },
         {
           "id": "q24",
@@ -1769,7 +1835,7 @@
           "model_as_of": "2006-01-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q24/20261116T022306Z-59081b-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q24/20261116T061157Z-129c0f-answer.md"
         },
         {
           "id": "q10",
@@ -1784,7 +1850,7 @@
           "model_as_of": "2010-01-01",
           "as_of_mismatch": true,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q10/20261116T022317Z-c31479-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q10/20261116T061207Z-d6d42e-answer.md"
         },
         {
           "id": "q11",
@@ -1799,7 +1865,7 @@
           "model_as_of": "2024-08-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q11/20261116T022325Z-6623b0-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q11/20261116T061215Z-91f583-answer.md"
         },
         {
           "id": "q12",
@@ -1814,7 +1880,7 @@
           "model_as_of": "2024-09-01",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q12/20261116T022332Z-abd4ff-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q12/20261116T061223Z-5ae9bc-answer.md"
         },
         {
           "id": "q13",
@@ -1829,7 +1895,7 @@
           "model_as_of": "2025-01-15",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q13/20261116T022349Z-e3f0e9-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q13/20261116T061237Z-8e6a10-answer.md"
         },
         {
           "id": "q15",
@@ -1839,12 +1905,13 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
+            "10CFR50.59@2025-01-29 p.1",
             "10CFR50.59@2025-01-29 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q15/20261116T022400Z-a48241-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q15/20261116T061252Z-d963bb-answer.md"
         },
         {
           "id": "q16",
@@ -1854,42 +1921,48 @@
           "superseded": false,
           "cites_expected": true,
           "citations": [
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
+            "10CFR50.59@2025-01-29 p.1",
             "10CFR50.59@2025-01-29 p.1"
           ],
           "model_as_of": "2026-11-14",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q16/20261116T022411Z-abc431-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q16/20261116T061310Z-ecb6a0-answer.md"
         },
         {
           "id": "q17",
           "category": "control",
-          "decision": "answer",
+          "decision": "error",
           "expect_abstain": false,
           "superseded": false,
-          "cites_expected": true,
-          "citations": [
-            "10CFR50.59@2025-01-29 p.1"
-          ],
-          "model_as_of": "2026-11-14",
+          "cites_expected": false,
+          "citations": [],
+          "model_as_of": "\u2014",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q17/20261116T022419Z-82e318-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q17/20261116T061317Z-b13e7c-error.md"
         },
         {
           "id": "q23",
           "category": "control",
-          "decision": "answer",
+          "decision": "error",
           "expect_abstain": false,
           "superseded": false,
-          "cites_expected": true,
-          "citations": [
-            "EA-98-155@0 p.1"
-          ],
-          "model_as_of": "2026-11-14",
+          "cites_expected": false,
+          "citations": [],
+          "model_as_of": "\u2014",
           "as_of_mismatch": false,
           "violations": [],
-          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q23/20261116T022431Z-a82cc3-answer.md"
+          "trace": "/Users/nityanthmaramreddy/gord-demo/traces/eval/graph/q23/20261116T061324Z-48bb9c-error.md"
         }
       ]
     }
@@ -2150,6 +2223,7 @@
       }
     ]
   },
+  "reranked": false,
   "failure_cases": [
     {
       "id": "r02",
@@ -2341,25 +2415,18 @@
       "graph": "answer, cited ['10CFR50.59@1996-08-28 p.2']"
     },
     {
-      "id": "q04",
-      "category": "effective_after_issue",
-      "level": "generation",
-      "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
-      "graph": "answer, cited ['10CFR50.59@1996-08-28 p.1']"
-    },
-    {
       "id": "q05",
       "category": "effective_after_issue",
       "level": "generation",
       "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
-      "graph": "answer, cited ['10CFR50.59@1996-08-28 p.2']"
+      "graph": "answer, cited ['10CFR50.59@1996-08-28 p.2', '10CFR50.59@1996-08-28 p.2']"
     },
     {
       "id": "q06",
       "category": "effective_after_issue",
       "level": "generation",
       "flag": "answer, cited ['10CFR50.59@2025-01-29 p.1']",
-      "graph": "answer, cited ['10CFR50.59@2001-03-13 p.1', '10CFR50.59@2001-03-13 p.2']"
+      "graph": "answer, cited ['10CFR50.59@2001-03-13 p.1', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2', '10CFR50.59@2001-03-13 p.2']"
     },
     {
       "id": "q07",
