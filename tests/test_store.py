@@ -85,3 +85,42 @@ def test_undated_duplicate_of_a_dated_edge_is_corroboration_not_ambiguity(store)
                         evidence="(same rule, effective date not stated)", confidence="unresolved"))
     assert store.resolve_authority("10CFR50.59", date(2005, 1, 1)).resolved
     assert store.unresolved_into("10CFR50.59", "1997-01-01") == []
+
+
+def _withdrawn(rev: str = "0") -> DocumentVersion:
+    return DocumentVersion(doc_id="RG-X", revision=rev, family="RG-X", kind="reg_guide",
+                           status="withdrawn", effective_from=date(1990, 1, 1))
+
+
+def test_withdrawn_with_no_end_date_or_dated_edge_does_not_govern():
+    s = AuthorityStore()
+    s.upsert_document(_withdrawn())
+    assert not s.governs("RG-X", "0", date(2026, 11, 15))
+    res = s.resolve_authority("RG-X", date(2026, 11, 15))
+    assert res.withdrawn_undated == [("RG-X", "0")]
+    assert res.authoritative == []
+    assert not res.resolved
+
+
+def test_withdrawn_with_dated_ending_edge_governs_before_it_not_after():
+    s = AuthorityStore()
+    s.upsert_document(_withdrawn())
+    s.upsert_document(DocumentVersion(doc_id="RG-Y", revision="0", family="RG-Y",
+                                      kind="reg_guide", status="active",
+                                      effective_from=date(2000, 1, 1)))
+    s.add_edge(Edge(from_doc="RG-Y", from_rev="0", to_doc="RG-X", to_rev="0", edge_type="full",
+                    valid_from=date(2000, 1, 1), evidence="RG-X is replaced by RG-Y, 2000-01-01.",
+                    confidence="explicit"))
+    assert s.governs("RG-X", "0", date(1999, 12, 31))
+    assert not s.governs("RG-X", "0", date(2000, 1, 1))
+    assert s.resolve_authority("RG-X", date(1999, 12, 31)).withdrawn_undated == []
+
+
+def test_regression_guard_superseded_row_still_governs_in_its_own_era():
+    # Bi-temporal thesis: 'superseded' is NOT 'withdrawn'. It governed until its successor.
+    s = AuthorityStore()
+    s.upsert_document(DocumentVersion(
+        doc_id="10CFR50.59", revision="1996-08-28", family="10CFR50.59", kind="regulation",
+        status="superseded", effective_from=date(1996, 8, 28)))
+    assert s.governs("10CFR50.59", "1996-08-28", date(1998, 5, 13))
+    assert s.resolve_authority("10CFR50.59", date(1998, 5, 13)).withdrawn_undated == []

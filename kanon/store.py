@@ -132,10 +132,12 @@ class AuthorityResult(BaseModel):
     chain: list[Edge]                      # every edge traversed, for traceability
     unresolved: list[Edge]                 # edges blocking a confident answer
     undated: list[tuple[str, str]]         # versions with no effective_from: can't place on timeline
+    # versions recorded withdrawn with no end date and no dated ending edge: can't place on timeline
+    withdrawn_undated: list[tuple[str, str]] = []
 
     @property
     def resolved(self) -> bool:
-        return not self.unresolved and not self.undated
+        return not self.unresolved and not self.undated and not self.withdrawn_undated
 
 
 def _now() -> str:
@@ -278,11 +280,21 @@ class AuthorityStore:
             return False
         if d.effective_to is not None and as_of >= d.effective_to:
             return False
+        if self._withdrawn_undated(d, known_at):
+            return False
         for e in self.edges_into(doc_id, revision, known_at):
             if (e.edge_type in ENDS_AUTHORITY and e.confidence != "unresolved"
                     and e.valid_from is not None and e.valid_from <= as_of):
                 return False
         return True
+
+    def _withdrawn_undated(self, d: DocumentVersion, known_at: datetime | None) -> bool:
+        """Recorded withdrawn, but nothing dates the end: we can't say when it stopped governing.
+        Only 'withdrawn' — a 'superseded' revision legitimately governed in the past."""
+        return (d.status == "withdrawn" and d.effective_to is None
+                and not any(e.edge_type in ENDS_AUTHORITY and e.confidence != "unresolved"
+                            and e.valid_from is not None
+                            for e in self.edges_into(d.doc_id, d.revision, known_at)))
 
     def resolve_authority(self, doc_id: str, as_of: date,
                           known_at: datetime | None = None) -> AuthorityResult:
@@ -317,8 +329,11 @@ class AuthorityStore:
             unresolved += self._conflicting_end_dates(node, as_of, known_at)
         authoritative = sorted(k for k in seen if self.governs(*k, as_of, known_at))
         undated = sorted(k for k in seen if (d := self.get(*k)) and d.effective_from is None)
+        withdrawn_undated = sorted(k for k in seen if (d := self.get(*k))
+                                   and self._withdrawn_undated(d, known_at))
         return AuthorityResult(as_of=as_of, authoritative=authoritative, chain=chain,
-                               unresolved=unresolved, undated=undated)
+                               unresolved=unresolved, undated=undated,
+                               withdrawn_undated=withdrawn_undated)
 
     def _conflicting_end_dates(self, node: tuple[str, str], as_of: date,
                                known_at: datetime | None) -> list[Edge]:

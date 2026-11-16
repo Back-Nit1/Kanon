@@ -64,6 +64,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  UNRESOLVED {e.describe()}\n             “{e.evidence[:160]}”")
         for k in res.undated:
             print(f"  UNDATED    {k[0]} Rev {k[1]}: no effective_from recorded")
+        for k in res.withdrawn_undated:
+            print(f"  WITHDRAWN-UNDATED {k[0]} Rev {k[1]}: recorded withdrawn, "
+                  "no end date and no dated ending edge")
         return 0
 
     if args.cmd == "dlq":
