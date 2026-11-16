@@ -96,6 +96,8 @@ def parse_evidence(subject_doc: str, subject_rev: str, text: str,
     if m := SUPERSEDES.search(text):
         refs = [r for r in _refs(text[m.end():], subject_doc) if r != me]
         if not refs:
+            # Target is UNKNOWN on purpose: the subject supersedes something unnamed, which is
+            # ambiguity about what it replaced, not about its own authority. unresolved_into must not see it.
             return [_unresolved(*me, UNKNOWN, ANY_REV, text, when)]
         return [_edge(new=me, old=r, when=when, exact=exact, text=text) for r in refs]
 
@@ -103,7 +105,9 @@ def parse_evidence(subject_doc: str, subject_rev: str, text: str,
         if any(r[0] != subject_doc for r in _refs(text, subject_doc)):
             # The sentence withdraws some *other* named guide; it says nothing certain about the
             # subject. Never turn that into a self-withdrawal.
-            return [_unresolved(*me, UNKNOWN, ANY_REV, text, when,
+            # Subject is the TARGET: a withdrawal notice recorded against this subject whose named
+            # document is a different guide leaves the subject's own authority ambiguous, so it must block it.
+            return [_unresolved(UNKNOWN, ANY_REV, *me, text, when,
                                 note="withdrawal statement names a different document")]
         # No successor document: the edge points from the version to itself, meaning
         # "this version's authority ends at valid_from".
@@ -112,7 +116,8 @@ def parse_evidence(subject_doc: str, subject_rev: str, text: str,
                      confidence=_confidence(when, exact))]
 
     if PAGE_SWAP.search(text):
-        return [_unresolved(*me, UNKNOWN, ANY_REV, text, when,
+        # Subject is the TARGET: with no identified source we cannot say which text governs inside it.
+        return [_unresolved(UNKNOWN, ANY_REV, *me, text, when,
                             note="page replacement without a named target document")]
     return []
 

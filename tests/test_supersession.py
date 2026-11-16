@@ -142,3 +142,43 @@ def test_active_voice_incorporation_is_not_a_self_withdrawal():
     text = "Revision 1 incorporates guidance from withdrawn Regulatory Guide 1.95"
     [e] = parse_evidence("RG-1.78", "1", text, stated_date=date(2001, 12, 1))
     assert (e.from_doc, e.from_rev, e.to_doc, e.edge_type) == ("RG-1.78", "1", "RG-1.95", "cross_family")
+
+
+# Adapted from supersession_evidence.jsonl line 26 (RG 1.95 withdrawal notice, 67 FR 939): the
+# "incorporated into" clause is dropped so only the withdrawal of a *different* guide (RG 1.95)
+# remains. Parsed against RG 1.187 rev 2, which the sentence does not name.
+WITHDRAWS_OTHER_GUIDE = ("With the publication of Regulatory Guide 1.78, Regulatory Guide 1.95, "
+                         "‘‘Protection of Nuclear Power Plant Control Room Operators Against an "
+                         "Accidental Chlorine Release,’’ is being withdrawn.")
+# Not a verbatim NRC string: no real row hits this branch. Shape of a CFR page-replacement
+# instruction with no source document identified.
+PAGE_SWAP_NO_TARGET = "Remove pages 3-4 and insert new pages 3-4 as follows."
+# Not verbatim: active-voice supersession naming no document.
+SUPERSEDES_NOTHING_NAMED = "This revision supersedes the previous guidance."
+
+
+def _blocking(text):
+    [e] = parse_evidence("RG-1.187", "2", text)
+    store = AuthorityStore()
+    store.add_edge(e)
+    return e, store.unresolved_into("RG-1.187", "2")
+
+
+def test_withdrawal_of_a_different_guide_blocks_the_subject():
+    e, blocking = _blocking(WITHDRAWS_OTHER_GUIDE)
+    assert (e.to_doc, e.to_rev, e.confidence) == ("RG-1.187", "2", "unresolved")
+    assert blocking == [e]
+
+
+def test_page_swap_without_named_target_blocks_the_subject():
+    e, blocking = _blocking(PAGE_SWAP_NO_TARGET)
+    assert (e.to_doc, e.to_rev, e.confidence) == ("RG-1.187", "2", "unresolved")
+    assert blocking == [e]
+
+
+def test_supersedes_with_no_named_target_deliberately_does_not_block_the_subject():
+    # Deliberate: the subject replaced something unnamed. That is ambiguity about the old side,
+    # not about whether the subject governs, so unresolved_into must NOT see it. Do not "fix".
+    e, blocking = _blocking(SUPERSEDES_NOTHING_NAMED)
+    assert (e.from_doc, e.to_doc) == ("RG-1.187", "UNKNOWN")
+    assert blocking == []
