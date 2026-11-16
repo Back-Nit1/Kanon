@@ -193,6 +193,8 @@ def summarise_generation(rows: list[dict]) -> dict:
             # It counts as "not answered" in the rate but is reported separately so a slow run is
             # never read as a cautious one.
             "timed_out": sum(r["decision"] == "timeout" for r in rows),
+            # Same treatment for a question the provider or the stack failed on.
+            "errored": sum(r["decision"] == "error" for r in rows),
             "answer_rate": answered / n if n else 0.0,
             # Over ANSWERED questions. With nothing answered it is 0.0 — meaningless on its own,
             # which is exactly why it is only ever reported next to answer_rate.
@@ -203,6 +205,7 @@ def summarise_generation(rows: list[dict]) -> dict:
 def pair(s: dict) -> str:
     """The one place either half of the primary metric is formatted. Never split it."""
     late = f", {s['timed_out']} TIMED OUT" if s.get("timed_out") else ""
+    late += f", {s['errored']} FAILED" if s.get("errored") else ""
     return (f"superseded-citation rate {s['superseded_citation_rate']:.0%} "
             f"@ answer rate {s['answer_rate']:.0%} ({s['answered']}/{s['questions']} answered{late})")
 
@@ -223,14 +226,23 @@ def generation_eval(llm, index: CorpusIndex, store: AuthorityStore, today: date,
             with span("eval.generation_question"), deadline(question_timeout):
                 state = agent.invoke({"question": q.question, "mode": mode, "today": today},
                                      config={"callbacks": [recorder]})
-        except QuestionTimeout:
-            # Keep the partial trace (tool calls made so far) and move on; never drop the row.
-            with span("eval.timeout"):
+        # QuestionTimeout is a BaseException, so both arms are needed. One transient provider
+        # error (a dropped connection mid-run) must not destroy the other 50 rows: record the
+        # question as 'error', keep the partial trace, and carry on. An error is NOT an
+        # abstention — the system never reached a gate decision — so it is reported separately
+        # and excluded from the named failure cases, exactly like a timeout.
+        except (QuestionTimeout, Exception) as exc:
+            timed_out = isinstance(exc, QuestionTimeout)
+            decision = "timeout" if timed_out else "error"
+            with span(f"eval.{decision}"):
                 pass
-            state = {"question": q.question, "mode": mode, "decision": "timeout",
-                     "final": f"TIMED OUT after {question_timeout:g}s; no answer or gate decision."}
+            state = {"question": q.question, "mode": mode, "decision": decision,
+                     "final": (f"TIMED OUT after {question_timeout:g}s" if timed_out
+                               else f"FAILED: {type(exc).__name__}: {exc}")
+                              + "; no answer or gate decision."}
+            print(f"  {q.id} [{label or mode}] {state['final']}", file=sys.stderr)
             path = recorder.write(trace_dir / mode / q.id, state)
-            rows.append({"id": q.id, "category": q.category, "decision": "timeout",
+            rows.append({"id": q.id, "category": q.category, "decision": decision,
                          "expect_abstain": not q.expected, "superseded": False,
                          "cites_expected": False, "citations": [], "model_as_of": "—",
                          "as_of_mismatch": False, "violations": [], "trace": str(path)})
@@ -298,8 +310,8 @@ def failure_cases(retrieval: dict, generation: dict | None, resolver: list[dict]
         g_flag = {r["id"]: r for r in generation.get("flag", {}).get("rows", [])}
         for g in generation.get("graph", {}).get("rows", []):
             f = g_flag.get(g["id"])
-            if f is None or "timeout" in (f["decision"], g["decision"]):
-                continue   # a timeout says nothing about authority; never score it as a failure
+            if f is None or {f["decision"], g["decision"]} & {"timeout", "error"}:
+                continue   # neither says anything about authority; never score it as a failure
             if g["expect_abstain"]:
                 graph_ok, flag_bad = g["decision"] == "abstain", f["decision"] == "answer"
             else:
@@ -333,9 +345,11 @@ def render_report(res: dict) -> str:
             L.append(f"| {m} | {s['superseded_citation_rate']:.0%} | {s['answer_rate']:.0%} | "
                      f"{s['answered']}/{s['questions']} | {s['cites_expected_rate']:.0%} |")
         L += ["", *[f"- `{m}`: {pair(g['summary'])}" for m, g in res["generation"].items()], ""]
-        if any(g["summary"].get("timed_out") for g in res["generation"].values()):
-            L += ["**Some questions timed out.** A timeout is not an abstention; those rows have no "
-                  "answer and no gate decision, and are excluded from named failure cases.", ""]
+        if any(g["summary"].get("timed_out") or g["summary"].get("errored")
+               for g in res["generation"].values()):
+            L += ["**Some questions timed out or failed.** Neither is an abstention; those rows have "
+                  "no answer and no gate decision, and are excluded from named failure cases. A "
+                  "failed row means the provider or the stack errored, not that the system refused.", ""]
 
     L += ["## Retrieval (no LLM)", "",
           "| mode | recall@k | MRR | superseded-chunk rate | retrieved chunks |", "|---|---|---|---|---|"]

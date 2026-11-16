@@ -312,3 +312,27 @@ def test_timeout_is_reported_not_scored_as_abstention_or_failure():
     s = evals.summarise_generation(rows)
     assert s["timed_out"] == 1 and s["answered"] == 1 and s["answer_rate"] == 0.5
     assert "1 TIMED OUT" in evals.pair(s)
+
+
+def test_provider_error_on_one_question_is_recorded_and_the_run_continues(tmp_path, monkeypatch):
+    """A dropped connection mid-run must cost one row, not the whole run."""
+    from kanon import agent as agent_mod
+
+    seen = []
+
+    class Flaky:
+        def invoke(self, payload, config=None):
+            seen.append(payload["question"])
+            raise ConnectionError("Connection error.")
+
+    monkeypatch.setattr(agent_mod, "build_agent", lambda *a, **k: Flaky())
+    qs = [evals.Question(id=f"q{i}", category="control", query_kind="current",
+                         question=f"question {i}?", expected=[]) for i in (1, 2)]
+    rows = evals.generation_eval(object(), object(), AuthorityStore(), TODAY, qs, "graph", tmp_path)
+
+    assert seen == ["question 1?", "question 2?"]          # the second question still ran
+    assert [r["decision"] for r in rows] == ["error", "error"]
+    assert all("ConnectionError" in (tmp_path / "graph" / r["id"]).glob("*.md").__next__().read_text()
+               for r in rows)                              # the failure is in the trace, not lost
+    s = evals.summarise_generation(rows)
+    assert s["errored"] == 2 and s["answered"] == 0 and "2 FAILED" in evals.pair(s)
