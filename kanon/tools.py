@@ -17,7 +17,15 @@ from pydantic import BaseModel, Field
 
 from kanon.ingest import Chunk
 from kanon.retrieval import CorpusIndex, Mode
-from kanon.store import AuthorityResult, AuthorityStore, DocumentVersion
+from kanon.store import AuthorityResult, AuthorityStore, DocumentVersion, Edge
+
+
+class RevisionAuthority(BaseModel):
+    doc_id: str
+    revision: str
+    governs_on_as_of: bool          # did THIS revision govern on as_of
+    ended_by: list[Edge]            # dated, non-partial edges into this revision
+    authority: AuthorityResult      # what governs the subject matter on as_of
 
 
 class CurrentRequirementsArgs(BaseModel):
@@ -66,12 +74,19 @@ def make_tools(index: CorpusIndex, store: AuthorityStore, mode: Mode, k: int = 8
         return store.revision_history(doc_id)
 
     @tool(args_schema=ResolveSupersessionArgs)
-    def resolve_supersession(doc_id: str, revision: str, as_of: date) -> AuthorityResult:
-        """What superseded this document revision, how (full/partial/cross-family/withdrawn),
-        and what governs its subject matter on `as_of`."""
+    def resolve_supersession(doc_id: str, revision: str, as_of: date) -> RevisionAuthority:
+        """Report store lookups for one document revision: whether that revision governed on
+        `as_of`, the dated non-partial supersession/withdrawal edges that point into it, and the
+        documents the store lists as governing the same subject matter on `as_of`. These are
+        records, not a ruling; the authority gate decides what may be cited."""
         # Spec draft had no as_of here ("what governs now"). Added it: "now" is just one value of
         # as_of, and an implicit today() would be the only date in the system nobody chose.
-        return store.resolve_authority(doc_id, as_of)
+        return RevisionAuthority(
+            doc_id=doc_id, revision=revision,
+            governs_on_as_of=store.governs(doc_id, revision, as_of),
+            ended_by=[e for e in store.edges_into(doc_id, revision)
+                      if e.valid_from is not None and e.edge_type != "partial"],
+            authority=store.resolve_authority(doc_id, as_of))
 
     @tool(args_schema=PrecedentArgs)
     def find_precedent_events(system: str, symptom: str, since: date | None = None,
