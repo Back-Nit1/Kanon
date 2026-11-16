@@ -14,13 +14,11 @@ dependencies = [
   "pydantic>=2.7",
   "python-dotenv>=1.0",
   "pyyaml>=6.0",
-  "psycopg[binary]>=3.2",
 ]
 
 [project.scripts]
 kanon = "kanon.cli:main"
 kanon-eval = "kanon.evals:main"
-kanon-dashboard = "kanon.dashboard:main"
 
 [dependency-groups]
 dev = ["pytest>=8"]

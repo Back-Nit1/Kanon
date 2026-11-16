@@ -20,6 +20,7 @@ OCR is off: degraded scans are out of scope (see KANON.md). The corpus is restri
 with a text layer; a scan yields no chunks and fails Tier A loudly instead of yielding garbage.
 """
 
+import hashlib
 import json
 import re
 import xml.etree.ElementTree as ET
@@ -86,6 +87,68 @@ REQUIRED_KEYS = set(Chunk.model_fields) - {"score"}
 # heading handling, metadata), so the next `kanon ingest` re-queues every document instead of
 # skipping them as already done.
 CHUNKING_VERSION = 3
+
+
+def manifest_path(data_dir: Path, local_path: str) -> Path:
+    """Confine manifest paths, symlinks included, to the data directory. The manifest is an input
+    file: an absolute path or a `../` escape must not reach the parser."""
+    base = data_dir.resolve()
+    path = (base / local_path).resolve()
+    if path != base and base not in path.parents:
+        raise ValueError(f"local_path escapes data directory: {local_path!r}")
+    return path
+
+
+def sha256_file(path: Path) -> str:
+    """Streamed, not read whole: these are multi-megabyte PDFs."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def ingest_all(data_dir: Path, store, index, converter: "DocumentConverter | None" = None,
+               chunker: HybridChunker | None = None) -> list[Chunk]:
+    """Manifest -> parse -> validate -> embed -> hot/cold, one document at a time in one process.
+
+    Halts on the first failure rather than quarantining it: a document missing from the index is
+    a document the system will silently fail to cite, so it has to be seen now, not in a queue.
+
+    Rejected: the Postgres job queue this repo carried (leases, SKIP LOCKED workers, retries,
+    dead-letter table, audit trigger). Twenty-six documents parse in minutes on one laptop, and
+    KANON.md puts servers and operational surface out of scope. A crash is answered by re-running
+    `kanon ingest`: chunk ids are deterministic and Chroma writes are upserts, so a repeat run
+    rewrites the same rows. Bring the queue back when ingest is a service with concurrent
+    producers, not a command someone runs.
+    """
+    from kanon.checks import check_chunks     # checks imports this module; import at call time
+    converter = converter or make_converter()
+    chunker = chunker or HybridChunker()
+    out: list[Chunk] = []
+    for line in (data_dir / "manifest.jsonl").read_text().splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        path = manifest_path(data_dir, row["local_path"])
+        doc = store.get(row["doc_id"], row["revision"])
+        if doc is None:
+            raise LookupError(f"{row['doc_id']}@{row['revision']} is not in the authority "
+                              "store; run `kanon load` first")
+        declared = row.get("sha256")
+        if declared and sha256_file(path) != declared:
+            raise ValueError(f"{path.name}: sha256 differs from the manifest — the bytes changed "
+                             "since the manifest was written; re-verify the source")
+        page_range = tuple(row["page_range"]) if row.get("page_range") else None
+        chunks = chunk_document(path, doc, row.get("paginated", True), converter, chunker,
+                               page_range=page_range)
+        check_chunks(chunks)                   # fail before paying for embeddings
+        # Drop this revision's old chunks first, so a shorter new file leaves no stale tail.
+        index.remove_doc(f"{doc.doc_id}@{doc.revision}")
+        index.add(chunks)
+        print(f"  {doc.doc_id} Rev {doc.revision}: {len(chunks)} chunks")
+        out += chunks
+    return out
 
 
 def make_converter() -> DocumentConverter:

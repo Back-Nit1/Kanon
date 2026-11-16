@@ -2,9 +2,10 @@
 
     with span("llm.draft"): ...
 
-Records go to traces/timing.jsonl (KANON_TIMING_LOG overrides). `kanon-dashboard` reads it.
+Records go to traces/timing.jsonl (KANON_TIMING_LOG overrides): read it with `cat`/`jq`.
 Rejected: OpenTelemetry/LangSmith — a collector or hosted service for a single-process eval
-harness. An append-only JSONL file is enough and can be read by `cat`.
+harness. An append-only JSONL file is enough. A localhost dashboard that served this file was
+cut for the same reason: a server is not part of a local evaluation harness.
 Not thread-safe by design: the eval runs questions one at a time, so one module-level context
 (which mode / question is running) is accurate. Revisit if evals are ever parallelised.
 """

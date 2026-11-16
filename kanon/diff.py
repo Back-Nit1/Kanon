@@ -26,7 +26,10 @@ class Paragraph(BaseModel):
 # Headings must open a line: "pursuant to § 50.90" mid-sentence is a cross-reference, not a heading.
 _HEADING = re.compile(r"(?m)^[ \t]*(?:-[ \t]+)?§[ \t]*(\d+\.\d+[a-z]?)")
 # Print furniture from the source CFR/FR PDFs (GPO footers/page numbers); never legal text.
-_FURNITURE = re.compile(r"VerDate|Jkt|PO 00000|\bFrm\b|Sfmt|E:\\FR\\FM\\|^\s*\d+\s*$")
+_FURNITURE = re.compile(r"VerDate|Jkt|PO 00000|\bFrm\b|Sfmt|E:\\FR\\FM\\|^\s*\d+\s*$"
+                        # The agency name on its own line is the CFR print edition's page
+                        # running head, not body text; it was being glued onto (c)(1)(i).
+                        r"|^\s*-?\s*Nuclear Regulatory Commission\s*$")
 _TOP = re.compile(r"\([a-z]\)")
 _DESIGNATOR = re.compile(r"^[ \t]*(?:-[ \t]+)?((?:\([A-Za-z0-9]+\))+)[ \t]*(.*)$")
 _ROMAN = re.compile(r"[ivx]+")
@@ -110,7 +113,10 @@ _QUOTES = str.maketrans({"“": '"', "”": '"', "‘": '"', "’": '"'})
 
 
 def normalize(text: str) -> str:
+    """Compare-only form. Typography must never read as a change in the law: the same section
+    reference is printed '§ 50.34' in one CFR edition and '§50.34' in another."""
     text = text.replace("''", '"').replace("``", '"').translate(_QUOTES)
+    text = re.sub(r"§\s+(?=\d)", "§", text)
     return " ".join(text.casefold().split())
 
 

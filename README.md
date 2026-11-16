@@ -16,8 +16,7 @@ Operational verification and security notes: [VERIFICATION.md](VERIFICATION.md) 
 | ----- | ---------------------------------------- | ------------------------------------------------------------------------------ |
 | 1     | `kanon/store.py`                         | Bi-temporal SQLite store + deterministic `resolve_authority`                   |
 | 1     | `kanon/supersession.py`                  | Verbatim supersession text → typed edges (regex, no LLM)                       |
-| 2     | `kanon/ingest.py`                        | Docling parse → page-anchored chunks with full metadata                        |
-| 2     | `kanon/queue.py`                         | Postgres queue, resumable workers, lifecycle audit, DLQ + chunk sidecar        |
+| 2     | `kanon/ingest.py`                        | Manifest → Docling parse → page-anchored chunks with full metadata → index     |
 | 2     | `kanon/diff.py`                          | Deterministic CFR paragraph diff between two as-of dates (`kanon diff`)        |
 | 2     | `kanon/retrieval.py`                     | Hot/cold Chroma + BM25, RRF fusion, modes `none`/`flag`/`graph`                |
 | 3     | `kanon/tools.py`                         | Typed tools; `as_of` required; no unscoped search tool; `diff_revisions` (10 s budget) |
@@ -39,9 +38,9 @@ match recorded facility metadata; unknown metadata is excluded. A document expli
 `applicability_scope=global` remains eligible; the loader also assigns the closed `regulation`
 kind global scope so facility filters cannot hide generally applicable 10 CFR requirements.
 Applicability is taken from manifest/authority
-fields or strict labeled first-page text, and unrecorded fields remain unknown. The Postgres
-chunk sidecar stores these fields alongside revision, status, dates and source provenance.
-Both dense and BM25 retrieval are filtered before reciprocal-rank fusion. A changed chunking
+fields or strict labeled first-page text, and unrecorded fields remain unknown. Chunk metadata in
+Chroma carries these fields alongside revision, status, dates and source provenance. Both dense
+and BM25 retrieval are filtered before reciprocal-rank fusion. A changed chunking
 version requires re-ingestion before existing indexed documents gain this metadata.
 
 ## Run
@@ -49,26 +48,27 @@ version requires re-ingestion before existing indexed documents gain this metada
 ```bash
 uv sync
 cp .env.example .env               # model-provider keys are needed only for embedding/answering
-docker compose up -d               # Postgres queue + Chroma server
 uv run kanon load                  # data/manifest.jsonl + labels -> authority.db
-uv run kanon ingest                # enqueue, parse, validate, embed, publish
-uv run kanon worker                # optional additional SKIP LOCKED worker
-uv run kanon dlq                   # failed files, attempts, causes, source URLs
-uv run kanon dlq --failing         # revisions ranked by accumulated failures
+uv run kanon ingest                # parse, validate, embed, route hot/cold, Tier A checks
 uv run kanon resolve 10CFR50.59 --as-of 2000-06-01
 uv run kanon diff 10CFR50.59 --from 2000-06-01 --to 2026-11-15   # paragraph-level diff of what governed on each date
 uv run kanon ask "An engineer wants to replace a primary coolant pump..." --mode graph
-uv run kanon-dashboard             # localhost:8791, where an eval spends its time (reads traces/timing.jsonl)
 uv run kanon-eval                  # all three modes; --retrieval-only needs no chat model
+uv run kanon-eval --modes none --rerank    # the reranker A/B
 uv run pytest -q
 ```
 
-Ingest jobs move through `queued → parsing → validated → embedding → published`. Exceptions
-move a job to `failed` for retry; after three attempts it moves to the dead-letter queue. The
-database idempotency constraint is `(doc_id, revision, authority_status, source_sha256, chunking_version)`, so unchanged documents cannot be re-enqueued accidentally. A Postgres
-trigger appends every lifecycle transition to immutable `job_events` in the same transaction.
-Malformed-file diagnostics are recorded at enqueue time, but the worker still performs the
-configured retries so transient downloads and parser failures follow one review path.
+No services: SQLite for authority, a local Chroma directory for vectors, files for traces. Ingest
+is one process over `data/manifest.jsonl`, and it **halts on the first bad document** rather than
+retrying it into a queue — a document that silently fails to index is a document the system will
+silently fail to cite. Re-running is an upsert, not a duplicate: chunk IDs are deterministic and a
+revision's old chunks are dropped before its new ones are written. The acceptance gates, in order,
+are in [VERIFICATION.md](VERIFICATION.md).
+
+A Postgres job queue (leases, `SKIP LOCKED` workers, retries, dead-letter table, audit trigger)
+and a localhost timing dashboard were built here and then **removed**: KANON.md puts servers and
+operational surface out of scope, and 26 documents parse in minutes on one laptop. Bring them back
+when ingest is a service with concurrent producers, not a command someone runs.
 
 ## Known limitations
 

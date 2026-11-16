@@ -1,66 +1,49 @@
-# Ingest verification process
+# Ingest verification contract
 
-This process is the acceptance contract for a document moving from the manifest to the
-searchable index. A job is not reported as `published` until every step below succeeds.
+`kanon ingest` is the only path from the manifest into the searchable index. It runs one
+document at a time in one process and **halts on the first failure** instead of quarantining it:
+a document missing from the index is a document the system will silently fail to cite, so the
+failure has to be visible now. There is no retry, no lease and no dead-letter queue — the
+recovery action is to fix the input and run the command again.
 
-## State and evidence
+Re-running is safe by construction: chunk IDs are deterministic (`doc_id@revision#NNNN`), a
+revision's old chunks are deleted before its new ones are written, and Chroma writes are upserts.
+A re-run rewrites the same rows.
 
-The lifecycle is `queued -> parsing -> validated -> embedding -> published`. A recoverable
-error moves the job to `failed`; a third failed attempt moves it to `dead`. Every insert and
-state change is copied by a Postgres trigger to the append-only `job_events` table in the same
-database transaction. `kanon dlq --failing` uses that history to identify repeat failures.
+## Per-document gates, in order
 
-Postgres and Chroma do not share a transaction. A vector upsert can succeed immediately before
-the worker dies and before its Postgres checkpoint commits. Recovery therefore treats vector
-writes as at-least-once: chunk IDs are deterministic and Chroma writes are upserts, so the next
-worker safely repeats the uncheckpointed batch. The audit log proves Postgres state changes; it
-does not claim atomicity with Chroma. Vectors are searchable batch by batch before the job is
-published, and an in-flight Chroma request may complete after its Postgres connection is lost.
-The database lease and advisory lock cannot fence that request inside Chroma; reconciliation
-or a transactional publication mechanism is needed for strict atomic visibility and fencing.
-The session advisory lock serializes live workers and enqueues for each revision; a hung session
-can delay work on that revision until the connection closes.
+1. **Path confinement** — the manifest's `local_path` is resolved under `KANON_DATA_DIR`, with
+   symlinks followed; anything escaping that directory is rejected before the parser sees it.
+2. **Authority identity** — the `(doc_id, revision)` must already exist in `AuthorityStore`
+   (`kanon load`). Status, dates and source URL are read from the store, never from the manifest.
+3. **Source digest** — the file's streamed SHA-256 must equal the manifest's `sha256`. A
+   mismatch means the bytes changed since the manifest was verified, and nothing is parsed.
+4. **Parse validation** (Tier A, before any embedding is paid for) — at least one chunk; every
+   chunk carries a valid 1-based page, and `doc_id`, `revision`, `status`, `kind` and (for
+   requirements, not records) `effective_from`.
+5. **Pre-write validation** — one finite vector per chunk, one consistent dimension matching the
+   configured model, full Chroma metadata per chunk, and a legal authority status. Only then is
+   the batch upserted, routed `active` → hot and every other status → cold.
 
-## Verification gates
+## Whole-index gates at the end of the run
 
-1. **Enqueue identity and preflight**
-   - Read authority status and source URL from `AuthorityStore`, never from the manifest.
-   - Compute the full file SHA-256 by streaming the bytes.
-   - Recheck the source digest during processing, and reject a manifest SHA-256 mismatch.
-   - Enforce one job for `(doc_id, revision, authority_status, content_sha256,
-     chunking_version)`. Re-adding the same identity is a no-op, including after it is dead.
-   - Record obvious file faults (`missing`, empty, invalid/truncated/encrypted PDF) in
-     `preflight_issue`. The job still receives the normal three attempts so preflight cannot
-     become an unreviewed rejection path.
+`kanon.checks.run_all`:
 
-2. **Parse validation**
-   - Produce at least one chunk.
-   - Require valid page provenance and all authority metadata used by retrieval.
-   - Require each parsed chunk's authority status to match the status captured in the job.
+- embedding count equals the chunk count the run produced;
+- every stored vector matches the configured dimension;
+- every stored chunk carries the required metadata keys and a page;
+- the hot collection holds **zero** non-active chunks — asserted over every row, not sampled;
+- round-trip: a known chunk is retrievable in the top 5 for its own text.
 
-3. **Pre-publish embedding validation**
-   - Require one vector per chunk, non-empty numeric vectors, and one consistent dimension.
-   - When the configured embedding dimension is known, require an exact match.
-   - Validate every Chroma metadata object and routing decision: only `active` chunks may enter
-     hot; every other authority status must enter cold.
-   - Only after those checks pass may the batch be upserted.
+Any failure raises `PipelineIntegrityError`. Nothing self-repairs.
 
-4. **Post-write verification**
-   - Save chunk metadata and the completed-batch checkpoint in one Postgres transaction.
-   - Mark the job `published` only after all vector writes and checkpoints finish.
-   - At the end of `kanon ingest`, compare Postgres chunk IDs to Chroma, verify dimensions and
-     metadata, assert hot-tier purity, and perform a round-trip retrieval.
+## Tests that hold this up
 
-## Required tests
+`tests/test_pipeline.py`, on the two real GovInfo CFR editions in `data/raw/govinfo`:
 
-- unchanged files are no-ops, including dead jobs; changed bytes, authority status, or chunking
-  version create a new job;
-- two enqueuers racing on the same manifest create one job, and two workers never claim the
-  same job;
-- a worker crash is reclaimed from every in-progress state and deterministic upserts do not
-  duplicate chunks;
-- malformed files receive three attempts and then retain actionable DLQ evidence;
-- invalid metadata, routing, vector count, or vector dimension fails before the vector upsert;
-- the audit trigger records every transition and refuses update/delete of its event rows;
-- a requeue resets the three-attempt cycle but never resets `total_attempts`.
-
+- the manifest run routes the superseded 1997 text to cold and the active text to hot, and
+  `run_all` passes over the resulting index;
+- a second run of the same manifest does not duplicate chunks;
+- a `local_path` escaping the data directory is rejected;
+- a manifest SHA-256 mismatch aborts with nothing embedded or written;
+- a dimension mismatch halts; the gate blocks a deliberately constructed superseded citation.

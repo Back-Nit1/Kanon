@@ -39,7 +39,6 @@ import re
 from collections.abc import Callable
 from datetime import date
 from typing import Literal
-from urllib.parse import urlparse
 
 import chromadb
 from langchain_core.embeddings import Embeddings
@@ -64,12 +63,10 @@ def is_record(kind: str) -> bool:
 
 
 def open_chroma(s) -> chromadb.ClientAPI:
-    """Local PersistentClient is single-process (SQLite underneath). Parallel ingest workers
-    need the Chroma server: set KANON_CHROMA_URL (docker-compose.yml runs one)."""
-    if not s.chroma_url:
-        return chromadb.PersistentClient(path=str(s.chroma_dir))
-    u = urlparse(s.chroma_url)
-    return chromadb.HttpClient(host=u.hostname, port=u.port or 8000, ssl=u.scheme == "https")
+    """One local directory, SQLite underneath. Ingest and eval are single-process commands.
+    Rejected: the Chroma server (the repo ran one in docker-compose) — it exists so several
+    ingest workers can write at once, which is the concurrency this project dropped."""
+    return chromadb.PersistentClient(path=str(s.chroma_dir))
 
 
 RRF_K = 60          # standard constant from Cormack et al. 2009; dampens the top ranks' dominance
@@ -141,23 +138,19 @@ class CorpusIndex:
             if chunk.status not in {"active", "superseded", "withdrawn"}:
                 raise ValueError(f"{chunk.id}: invalid authority status {chunk.status!r}")
 
-    def write(self, chunks: list[Chunk], vectors: list[list[float]],
-              ingest_key: str | None = None) -> None:
+    def write(self, chunks: list[Chunk], vectors: list[list[float]]) -> None:
         """Validate, then route active -> hot and every non-active revision -> cold."""
         self.validate_publish(chunks, vectors)
         for col, active in ((self.hot, True), (self.cold, False)):
             sel = [(c, v) for c, v in zip(chunks, vectors) if (c.status == "active") == active]
             if sel:
-                metadatas = [c.chroma_metadata() for c, _ in sel]
-                if ingest_key:
-                    for metadata in metadatas:
-                        metadata["_ingest_key"] = ingest_key
                 col.upsert(ids=[c.id for c, _ in sel], embeddings=[v for _, v in sel],
-                           documents=[c.text for c, _ in sel], metadatas=metadatas)
+                           documents=[c.text for c, _ in sel],
+                           metadatas=[c.chroma_metadata() for c, _ in sel])
         self._bm25.clear()
 
     def add(self, chunks: list[Chunk], batch: int = 128) -> None:
-        """Compatibility path: embed, verify and publish each batch."""
+        """Embed, verify and publish each batch."""
         for i in range(0, len(chunks), batch):
             part = chunks[i:i + batch]
             vectors = self.embed(part)
@@ -172,12 +165,6 @@ class CorpusIndex:
         # ponytail: no re-tiering when a document's status changes after ingest; re-ingest moves
         # it. Add a retier() (copy hot->cold with stored embeddings, then remove from hot) when
         # incremental status updates are needed. Never a bare delete.
-
-    def remove_ingest(self, ingest_key: str) -> None:
-        """Remove only vectors still owned by one failed identity, never a newer overwrite."""
-        for col in (self.hot, self.cold):
-            col.delete(where={"_ingest_key": ingest_key})
-        self._bm25.clear()
 
     # ---- reads ----------------------------------------------------------------------------
 

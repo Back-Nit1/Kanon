@@ -186,3 +186,69 @@ def test_requirements_search_is_added_when_model_omits_it(world):
          "mode": "graph", "today": TODAY})
     assert any(c["name"] == "search_current_requirements" for c in out["tool_calls"])
     assert out["decision"] == "answer"
+
+
+def test_ingest_all_routes_by_status_and_confines_manifest_paths(tmp_path):
+    """The whole ingest command, minus the model: manifest -> chunks -> hot/cold."""
+    import json
+    import shutil
+
+    import chromadb
+    from langchain_core.embeddings import DeterministicFakeEmbedding
+
+    from kanon.ingest import ingest_all, manifest_path, sha256_file
+
+    data = tmp_path / "data"
+    data.mkdir()
+    store = AuthorityStore()
+    rows = []
+    for doc, name in ((OLD, "CFR-1997-title10-vol1-sec50-59.pdf"),
+                      (NEW, "CFR-2002-title10-vol1-sec50-59.pdf")):
+        store.upsert_document(doc)
+        shutil.copy(RAW / name, data / name)
+        rows.append({"doc_id": doc.doc_id, "revision": doc.revision, "local_path": name,
+                     "sha256": sha256_file(data / name), "paginated": True})
+    (data / "manifest.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
+
+    index = CorpusIndex(chromadb.PersistentClient(path=str(tmp_path / "chroma")),
+                        DeterministicFakeEmbedding(size=DIM), store, expected_dim=DIM)
+    chunks = ingest_all(data, store, index)
+
+    assert chunks and index.hot.count() + index.cold.count() == len(chunks)
+    # 1997 text is superseded, so none of it may be reachable from the default (hot) path.
+    assert all(m["status"] == "active" for m in index.hot.get(include=["metadatas"])["metadatas"])
+    assert index.cold.count() == sum(c.revision == OLD.revision for c in chunks)
+    checks.run_all(index, chunks, DIM)                     # Tier A over the real index
+
+    ingest_all(data, store, index)                         # re-running is an upsert, not a duplicate
+    assert index.hot.count() + index.cold.count() == len(chunks)
+
+    (data / "manifest.jsonl").write_text(json.dumps({**rows[0], "local_path": "../escape.pdf"}))
+    with pytest.raises(ValueError, match="escapes data directory"):
+        ingest_all(data, store, index)
+    with pytest.raises(ValueError, match="escapes data directory"):
+        manifest_path(data, "/etc/passwd")
+
+
+def test_ingest_all_rejects_bytes_that_changed_since_the_manifest(tmp_path):
+    import json
+    import shutil
+
+    import chromadb
+    from langchain_core.embeddings import DeterministicFakeEmbedding
+
+    from kanon.ingest import ingest_all
+
+    data = tmp_path / "data"
+    data.mkdir()
+    store = AuthorityStore()
+    store.upsert_document(NEW)
+    shutil.copy(RAW / "CFR-2002-title10-vol1-sec50-59.pdf", data / "doc.pdf")
+    (data / "manifest.jsonl").write_text(json.dumps(
+        {"doc_id": NEW.doc_id, "revision": NEW.revision, "local_path": "doc.pdf",
+         "sha256": "0" * 64, "paginated": True}))
+    index = CorpusIndex(chromadb.PersistentClient(path=str(tmp_path / "chroma")),
+                        DeterministicFakeEmbedding(size=DIM), store, expected_dim=DIM)
+    with pytest.raises(ValueError, match="sha256 differs"):
+        ingest_all(data, store, index)
+    assert index.hot.count() == 0                          # nothing was embedded or written
