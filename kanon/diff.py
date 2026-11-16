@@ -22,6 +22,9 @@ class Paragraph(BaseModel):
 
 # Headings must open a line: "pursuant to § 50.90" mid-sentence is a cross-reference, not a heading.
 _HEADING = re.compile(r"(?m)^[ \t]*(?:-[ \t]+)?§[ \t]*(\d+\.\d+[a-z]?)")
+# Print furniture from the source CFR/FR PDFs (GPO footers/page numbers); never legal text.
+_FURNITURE = re.compile(r"VerDate|Jkt|PO 00000|\bFrm\b|Sfmt|E:\\FR\\FM\\|^\s*\d+\s*$")
+_TOP = re.compile(r"\([a-z]\)")
 _DESIGNATOR = re.compile(r"^[ \t]*(?:-[ \t]+)?((?:\([A-Za-z0-9]+\))+)[ \t]*(.*)$")
 _ROMAN = re.compile(r"[ivx]+")
 
@@ -48,26 +51,46 @@ def _depth(part: str, path: list[str]) -> int:
     return 2 if _ROMAN.fullmatch(inner) and len(path) >= 2 else 0
 
 
+def _region_lines(chunks: list[Chunk], section: str):
+    """Yield (chunk, line) for body lines in `section`, tracking the current heading ACROSS chunks:
+    a CFR-edition dump puts the heading in one chunk and continues it, heading-less, in the next."""
+    # ponytail: a cross-reference that wraps onto the start of a line ("§ 50.90 ...") would be read
+    # as a heading and switch the tracked section early. Needs a real layout signal to close.
+    current = None
+    for c in sorted(chunks, key=lambda c: (c.page, c.id)):
+        for line in c.text.splitlines():
+            if (line.startswith("Document: ") and " | revision: " in line) or _FURNITURE.search(line):
+                continue
+            h = _HEADING.match(line)
+            # ponytail: a bare "§ 50.59" is a page running head; ignored entirely. If a source ever
+            # used a bare running head to mark a real section change, the tracked section would
+            # persist too long.
+            if h and not line[h.end():].strip():
+                continue
+            if h:
+                current = h.group(1)
+            elif current == section:
+                yield c, line
+
+
 def paragraphs(chunks: list[Chunk], section: str = "50.59") -> dict[str, Paragraph]:
     out: dict[str, Paragraph] = {}
     path: list[str] = []
     key = None
-    for c in sorted(chunks, key=lambda c: (c.page, c.id)):
-        for line in section_region(c.text, section).splitlines():
-            if _HEADING.match(line):
-                continue
-            m = _DESIGNATOR.match(line)
-            body = line
-            if m:
-                for part in re.findall(r"\([A-Za-z0-9]+\)", m.group(1)):
-                    path = path[:_depth(part, path)] + [part]
-                key, body = "".join(path), m.group(2)
-                out.setdefault(key, Paragraph(key=key, text="", page=c.page,
-                                              doc_id=c.doc_id, revision=c.revision))
-            if key and body.strip():
-                p = out[key]
-                p.text = f"{p.text} {' '.join(body.split())}".strip()
-    return out
+    for c, line in _region_lines(chunks, section):
+        m = _DESIGNATOR.match(line)
+        body = line
+        if m:
+            for part in re.findall(r"\([A-Za-z0-9]+\)", m.group(1)):
+                path = path[:_depth(part, path)] + [part]
+            key, body = "".join(path), m.group(2)
+            out.setdefault(key, Paragraph(key=key, text="", page=c.page,
+                                          doc_id=c.doc_id, revision=c.revision))
+        if key and body.strip():
+            p = out[key]
+            p.text = f"{p.text} {' '.join(body.split())}".strip()
+    # CFR top-level paragraphs are always (a), (b)...; anything else is a continuation tail
+    return {k: v for k, v in out.items() if _TOP.match(k)}
 
 
 _QUOTES = str.maketrans({"“": '"', "”": '"', "‘": '"', "’": '"'})

@@ -59,3 +59,45 @@ def test_paragraph_spanning_two_chunks_is_joined():
 
 def test_normalize_ignores_whitespace_and_quote_style():
     assert normalize("the  ''Code'',\nas  updated") == normalize("the “Code”, as updated")
+
+
+def test_headingless_continuation_chunks_stay_in_section_regression_1996():
+    # real 1996 shape: heading in one chunk, (a)(2)/(b)/(c) in heading-less chunks after it
+    chunks = [
+        chunk("(a) Each licensee shall do the fifty-eight thing.\n§50.58 Hearings.\n(b) Fifty-eight text.", 1),
+        chunk("§50.59 Changes, tests and experiments.\n(a)(1) The holder may make changes.", 2),
+        chunk("(2) A proposed change shall be deemed an unreviewed safety question.\n"
+              "(b)(1) The holder shall maintain records.", 3),
+        chunk("(c) The Commission may require an amendment.", 4),
+        chunk("§50.60 Acceptance criteria for fracture prevention.\n(a) Fracture toughness text.", 5),
+    ]
+    out = paragraphs(chunks)
+    assert set(out) == {"(a)(1)", "(a)(2)", "(b)(1)", "(c)"}
+    blob = " ".join(p.text for p in out.values())
+    assert "fifty-eight" not in blob.lower() and "Fifty-eight" not in blob
+    assert "Fracture" not in blob and "fracture" not in blob
+
+
+def test_headingless_chunk_before_any_heading_contributes_nothing():
+    assert paragraphs([chunk("(a)(1) Orphan text with no heading seen yet.", 1)]) == {}
+
+
+def test_chunk_prefix_and_print_furniture_never_enter_paragraph_text():
+    text = ("Document: 10CFR50.59 | revision: 2001-03-13 | type: regulation | title: x\n"
+            "§50.59 Changes, tests, and experiments.\n"
+            "(a)(1) The holder may make changes, and\n"
+            "VerDate 11<MAY>2000 08:17 Feb 22, 2001 Jkt 194000 PO 00000 Frm 00001 Fmt 8010 Sfmt 8010\n"
+            "42\n"
+            "continue as described.")
+    out = paragraphs([chunk(text, 1)])
+    blob = " ".join(p.text for p in out.values())
+    assert "continue as described" in blob
+    assert "Document:" not in blob and "VerDate" not in blob and "42" not in blob
+
+
+def test_bare_running_head_does_not_attribute_foreign_tail_regression_2001():
+    # real chunk-0 shape: prefix, bare "§ 50.59" running head, then another section's tail
+    text = ("Document: 10CFR50.59 | revision: 2001-03-13 | type: regulation | title: x\n"
+            "§ 50.59\n"
+            "- (6) No petition or request for review will be entertained by the Commission.\n")
+    assert paragraphs([chunk(text, 1)]) == {}
